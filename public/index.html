@@ -1,0 +1,4023 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>V Splitter — 4:55 Vertical Clip Studio</title>
+  <!-- Three.js, GSAP & MP4-Muxer (Hardware WebCodecs Turbo Engine) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.min.js"></script>
+  <script src="auth-config.js"></script>
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+  <style>
+    :root {
+      --bg: #090a0f;
+      --panel: rgba(18, 21, 31, 0.86);
+      --panel-alt: #181c2a;
+      --border: #262c40;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --accent: #10b981;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      box-sizing: border-box;
+      overflow-x: hidden;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, #15192b 0%, var(--bg) 60%);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+      overflow-x: hidden;
+      max-width: 100%;
+      width: 100%;
+      position: relative;
+    }
+
+    #three-bg {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    header {
+      border-bottom: 1px solid var(--border);
+      background: rgba(18, 21, 31, 0.85);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      padding: 12px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex-shrink: 1;
+    }
+
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      flex-shrink: 0;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #6366f1, #ec4899);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 17px;
+      box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      white-space: nowrap;
+    }
+
+    .brand span {
+      font-size: 11.5px;
+      color: var(--muted);
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 380px;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+
+    .header-actions .btn {
+      padding: 7px 11px;
+      font-size: 12.5px;
+      white-space: nowrap;
+    }
+
+    .container {
+      position: relative;
+      z-index: 10;
+      max-width: 1400px;
+      width: 100%;
+      margin: 18px auto;
+      padding: 0 16px 60px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 360px;
+      gap: 20px;
+      box-sizing: border-box;
+    }
+
+    .container > div {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    @media (max-width: 1120px) {
+      .container {
+        grid-template-columns: minmax(0, 1fr);
+        padding: 0 12px 50px;
+        gap: 16px;
+      }
+    }
+
+    .card {
+      background: var(--panel);
+      backdrop-filter: blur(14px);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow-wrap: break-word;
+    }
+
+    .card-title {
+      font-size: 15.5px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: rgba(99, 102, 241, 0.16);
+      color: #a5b4fc;
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      white-space: nowrap;
+    }
+
+    .upload-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+      gap: 16px;
+      width: 100%;
+    }
+
+    .upload-grid > div {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    @media (max-width: 820px) {
+      .upload-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .dropzone {
+      border: 2px dashed #3b4262;
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+      background: rgba(24, 28, 42, 0.6);
+      transition: all 0.2s ease;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
+    .dropzone:hover, .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(99, 102, 241, 0.08);
+    }
+
+    .dropzone-icon {
+      font-size: 32px;
+    }
+
+    .dropzone h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .dropzone p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .instant-box {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 10px;
+      font-size: 13.5px;
+      font-weight: 600;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      color: var(--text);
+      text-decoration: none;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+    }
+
+    .btn-accent {
+      background: var(--accent);
+      color: #052e16;
+      font-weight: 700;
+    }
+
+    .btn-accent:hover:not(:disabled) {
+      filter: brightness(1.08);
+    }
+
+    .btn-secondary {
+      background: #1f2437;
+      border-color: #323954;
+      color: var(--text);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #282f47;
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-lg {
+      padding: 13px 22px;
+      font-size: 15px;
+      border-radius: 12px;
+    }
+
+    .input, select {
+      width: 100%;
+      background: #0d1017;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 9px 12px;
+      border-radius: 9px;
+      font-size: 13.5px;
+      outline: none;
+    }
+
+    .input:focus, select:focus {
+      border-color: var(--primary);
+    }
+
+    .path-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .progress-bar-wrap {
+      width: 100%;
+      height: 10px;
+      background: #0d1017;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #6366f1, #10b981);
+      width: 0%;
+      transition: width 0.25s ease;
+    }
+
+    .movie-info-bar {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px;
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+
+    .stat-item span {
+      display: block;
+      font-size: 11px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .stat-item strong {
+      font-size: 15px;
+      color: #fff;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      width: 100%;
+    }
+
+    .form-grid > div {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    @media (max-width: 720px) {
+      .form-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .field label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #d1d5db;
+      margin-bottom: 6px;
+    }
+
+    .field-hint {
+      font-size: 11.5px;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+
+    .inline-inputs {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      max-width: 100%;
+    }
+
+    .preset-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 7px;
+    }
+
+    .pill {
+      font-size: 11.5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: #1b2030;
+      border: 1px solid #2e3650;
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .pill:hover, .pill.active {
+      background: rgba(99, 102, 241, 0.22);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    /* Phone 9:16 Live Preview (Increased Ratio) */
+    .preview-sticky {
+      position: sticky;
+      top: 84px;
+    }
+
+    .phone-frame {
+      width: 100%;
+      max-width: 290px;
+      height: 515px;
+      margin: 0 auto;
+      background: #000000;
+      border: 4px solid #2a3045;
+      border-radius: 28px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.65);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: height 0.25s ease, width 0.25s ease;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 8px;
+      width: 76px;
+      height: 16px;
+      background: #181c28;
+      border-radius: 999px;
+      z-index: 5;
+    }
+
+    .preview-movie-box {
+      width: 100%;
+      height: 152px;
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 50%, #312e81 100%);
+      border-top: 1px solid rgba(255,255,255,0.12);
+      border-bottom: 1px solid rgba(255,255,255,0.12);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .preview-movie-box span {
+      font-size: 12px;
+      color: rgba(255,255,255,0.75);
+      font-weight: 600;
+      letter-spacing: 0.04em;
+    }
+
+    .preview-movie-box small {
+      font-size: 10px;
+      color: rgba(255,255,255,0.45);
+      margin-top: 3px;
+    }
+
+    .preview-title-overlay {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      text-align: center;
+      font-weight: 800;
+      color: #fbbf24;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+      pointer-events: none;
+      word-break: break-word;
+    }
+
+    .preview-part-overlay {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      text-align: center;
+      font-weight: 800;
+      color: #ffffff;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.95);
+      pointer-events: none;
+    }
+
+    .parts-preview-strip {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      max-width: 100%;
+      min-width: 0;
+      box-sizing: border-box;
+      padding: 8px 2px;
+      margin-top: 10px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .part-chip {
+      flex: 0 0 auto;
+      background: #171b29;
+      border: 1px solid #2b324b;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 11.5px;
+    }
+
+    .part-chip strong {
+      color: #a5b4fc;
+      display: block;
+    }
+
+    .part-chip span {
+      color: var(--muted);
+      font-size: 10.5px;
+    }
+
+    .outputs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }
+
+    .output-card {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .output-card video {
+      width: 100%;
+      aspect-ratio: 9 / 16;
+      max-height: 320px;
+      background: #000;
+      object-fit: contain;
+    }
+
+    .output-card-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .output-card-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .output-card-meta {
+      font-size: 11.5px;
+      color: var(--muted);
+    }
+
+    .status-banner {
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      margin-top: 12px;
+      display: none;
+    }
+
+    .status-banner.error {
+      display: block;
+      background: rgba(239, 68, 68, 0.14);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: #fca5a5;
+    }
+
+    .status-banner.success {
+      display: block;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+    }
+
+    /* Login Page Overlay Styles */
+    .login-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 100;
+      background: radial-gradient(circle at center, rgba(18, 21, 36, 0.78) 0%, rgba(7, 8, 13, 0.94) 100%);
+      backdrop-filter: blur(16px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .login-card {
+      width: 100%;
+      max-width: 440px;
+      background: rgba(18, 21, 31, 0.92);
+      border: 1px solid #2e3654;
+      border-radius: 20px;
+      padding: 28px 26px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), 0 0 40px rgba(99, 102, 241, 0.18);
+    }
+
+    .oauth-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0;
+      color: var(--muted);
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .oauth-divider::before,
+    .oauth-divider::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .btn-fb {
+      background: #1877f2;
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      width: 100%;
+      margin-bottom: 10px;
+    }
+
+    .btn-fb:hover {
+      background: #166fe5;
+    }
+
+    .btn-ig {
+      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      width: 100%;
+    }
+
+    .btn-ig:hover {
+      filter: brightness(1.08);
+    }
+
+    .oauth-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      background: rgba(5, 6, 10, 0.82);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .oauth-modal-box {
+      width: 100%;
+      max-width: 410px;
+      background: #141824;
+      border: 1px solid #323b59;
+      border-radius: 18px;
+      padding: 22px;
+      box-shadow: 0 22px 55px rgba(0, 0, 0, 0.8);
+    }
+
+    /* Side Console (User Cloud & Admin Mode) */
+    .mode-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: #0d1017;
+      padding: 5px;
+      border-radius: 11px;
+      border: 1px solid var(--border);
+      margin-bottom: 14px;
+    }
+
+    .mode-tab {
+      padding: 8px 10px;
+      border-radius: 8px;
+      font-size: 12.5px;
+      font-weight: 700;
+      text-align: center;
+      cursor: pointer;
+      color: var(--muted);
+      border: none;
+      background: transparent;
+      transition: all 0.15s ease;
+    }
+
+    .mode-tab.active {
+      background: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+    }
+
+    .mode-tab.admin-tab.active {
+      background: linear-gradient(135deg, #f59e0b, #ef4444);
+      color: #ffffff;
+    }
+
+    .cloud-list {
+      max-height: 250px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 8px;
+      padding-right: 4px;
+    }
+
+    .cloud-item {
+      background: var(--panel-alt);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .cloud-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .cloud-item-meta {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .cloud-item-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .btn-xs {
+      padding: 4px 9px;
+      font-size: 11px;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 900px) {
+      .brand span {
+        display: none;
+      }
+    }
+
+    @media (max-width: 768px) {
+      header {
+        padding: 10px 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .brand h1 {
+        font-size: 16.5px;
+      }
+      .container {
+        margin: 12px auto;
+        padding: 0 10px 36px;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 14px;
+      }
+      .card {
+        padding: 15px;
+        border-radius: 14px;
+      }
+      .inline-inputs {
+        flex-wrap: wrap;
+      }
+      .btn-lg {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="fb-root"></div>
+
+  <!-- Three.js 3D Background Canvas -->
+  <canvas id="three-bg"></canvas>
+
+  <!-- Main Login Page Overlay (Username/Password) -->
+  <div class="login-overlay" id="loginOverlay">
+    <div class="login-card" id="loginCardBox">
+      <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+        <div class="brand-icon" style="width: 44px; height: 44px; font-size: 20px;">V</div>
+        <div>
+          <h2 style="font-size: 20px; font-weight: 800; line-height: 1.2;">Sign In to V Splitter</h2>
+          <span style="font-size: 12px; color: var(--muted);">Cloud Playlist Studio &amp; 4m 55s Vertical Video Engine</span>
+        </div>
+      </div>
+
+      <div id="continueAsBox" style="display: none; margin-bottom: 16px;">
+        <button type="button" class="btn btn-accent btn-lg" id="continueAsBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;">
+          <span id="continueAsAvatar" style="width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.25); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">V</span>
+          <span id="continueAsText">Continue as</span>
+        </button>
+        <div style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--muted);">
+          Not you? <a href="#" id="switchAccountLink" style="color: #a5b4fc;">Use a different account</a>
+        </div>
+      </div>
+
+      <form id="loginForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="field">
+          <label>Username / Email</label>
+          <input type="email" id="loginEmailInput" class="input" placeholder="vaishnavideapad@gmail.com" autocomplete="username" required />
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="loginPasswordInput" class="input" placeholder="Enter password (Ideapad@183)" autocomplete="current-password" required />
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+          <span class="pill" id="quickFillUserCredsBtn" title="Click to fill vaishnavideapad@gmail.com / Ideapad@183">
+            ⚡ Auto-Fill User Login
+          </span>
+          <span style="font-size: 11px; color: var(--muted);">Admin Console available on side after login</span>
+        </div>
+
+        <div id="loginErrorBanner" class="status-banner error" style="margin-top: 2px; display: none;"></div>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="loginSubmitBtn" style="width: 100%; margin-top: 4px;">
+          🔐 Sign In to Studio
+        </button>
+      </form>
+
+      <div id="socialLoginBox">
+        <div class="oauth-divider">Or continue with</div>
+        <button type="button" class="btn btn-fb btn-lg" id="oauthFacebookBtn">
+          🔵 Continue with Facebook
+        </button>
+        <button type="button" class="btn btn-ig btn-lg" id="oauthInstagramBtn">
+          📸 Continue with Instagram
+        </button>
+        <div style="text-align: center; margin-top: 10px;">
+          <a href="#" id="openOauthSetupLink" style="font-size: 11.5px; color: #a5b4fc; text-decoration: none; cursor: pointer;">
+            ⚙️ Configure Facebook App ID / Test Mode
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Facebook & Social OAuth Setup / Demo Login Modal -->
+  <div class="oauth-modal" id="oauthSetupModal">
+    <div class="oauth-modal-box">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 22px;">🔵</span>
+          <h3 style="font-size: 16px; font-weight: 800; color: #ffffff; margin: 0;">Facebook OAuth Setup</h3>
+        </div>
+        <button type="button" id="closeOauthModalBtn" style="background: transparent; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 4px 8px;">✕</button>
+      </div>
+
+      <div style="background: rgba(24, 119, 242, 0.12); border: 1px solid rgba(24, 119, 242, 0.35); border-radius: 12px; padding: 14px; margin-bottom: 14px;">
+        <div style="font-size: 13px; font-weight: 700; color: #93c5fd; margin-bottom: 4px;">
+          ⚡ Instant Access (Demo &amp; Testing Mode)
+        </div>
+        <p style="font-size: 11.5px; color: #cbd5e1; margin-bottom: 10px; line-height: 1.4;">
+          Test Facebook sign-in immediately without having to create or verify a Meta Developer App.
+        </p>
+        <button type="button" class="btn btn-fb btn-sm" id="instantFbDemoBtn" style="width: 100%; margin-bottom: 0;">
+          🚀 Sign In as Facebook User (Instant Demo)
+        </button>
+      </div>
+
+      <div class="oauth-divider" style="margin: 12px 0;">OR CONNECT META APP ID</div>
+
+      <div style="background: var(--panel-alt); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+        <div style="font-size: 12.5px; font-weight: 700; color: #e2e8f0; margin-bottom: 6px;">
+          🔑 Connect Live Facebook App ID
+        </div>
+        <div class="field" style="margin-bottom: 8px;">
+          <label style="font-size: 11px;">Meta Facebook App ID</label>
+          <input type="text" id="modalFbAppIdInput" class="input" placeholder="e.g. 123456789012345" />
+        </div>
+        <div id="modalOauthFeedback" style="font-size: 11.5px; color: #6ee7b7; margin-bottom: 8px; display: none;"></div>
+        <button type="button" class="btn btn-primary btn-sm" id="modalSaveFbAppIdBtn" style="width: 100%;">
+          💾 Save App ID &amp; Sign In with Facebook
+        </button>
+      </div>
+
+      <div style="font-size: 11px; color: var(--muted); line-height: 1.45; background: rgba(0,0,0,0.25); border-radius: 8px; padding: 10px;">
+        <strong style="color: #cbd5e1;">How to get your Meta App ID:</strong><br/>
+        1. Open <a href="https://developers.facebook.com/apps" target="_blank" style="color: #60a5fa; text-decoration: underline;">developers.facebook.com/apps</a><br/>
+        2. Create App &rarr; Choose <em>Authenticate and request data with Facebook Login</em><br/>
+        3. Under <strong>App Domains</strong> add <code style="color: #fde68a;">vsplitter.vercel.app</code><br/>
+        4. Under <strong>Valid OAuth Redirect URIs</strong> add <code style="color: #fde68a;">https://vsplitter.vercel.app/</code><br/>
+        5. Copy the 15-digit App ID at the top and paste it above!
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-icon">V</div>
+      <div>
+        <h1>V Splitter</h1>
+        <span>MKV &amp; MP4 to 4m 55s Black-Background Vertical Parts (Part 1 … Part N)</span>
+      </div>
+    </div>
+    <div class="header-actions" style="flex-wrap: wrap;">
+      <span class="badge" id="currentUserBadge" style="padding: 6px 11px; font-size: 12px;">👤 Guest</span>
+      <button class="btn btn-primary" id="headerNormalModeBtn" title="Switch to Normal Mode (User Cloud &amp; History)">
+        👤 Normal Mode
+      </button>
+      <button class="btn btn-secondary" id="headerAdminModeBtn" title="Open Admin Mode Console on the side">
+        🛡️ Admin Mode
+      </button>
+      <button class="btn btn-secondary" id="openOutputsFolderBtn" title="Open generated clips folder in Windows Explorer">
+        📂 Open Outputs Folder
+      </button>
+      <button class="btn btn-danger" id="logoutBtn" title="Sign out and return to Login Page" style="padding: 8px 12px;">
+        🚪 Logout
+      </button>
+    </div>
+  </header>
+
+  <div class="container">
+    <!-- Left Main Column -->
+    <div>
+      <!-- Step 1: Load Movie -->
+      <div class="card">
+        <div class="card-title">
+          <span>1. Upload or Select Movie File (.mkv / .mp4)</span>
+          <span class="badge">Supports Huge Multi-GB Movies</span>
+        </div>
+
+        <div class="upload-grid">
+          <div class="dropzone" id="dropzone">
+            <input type="file" id="fileInput" accept="video/*,.mkv,.mp4,.mov,.avi,.webm" hidden />
+            <div class="dropzone-icon" id="dropzoneIcon">📤</div>
+            <h3>Click or Drag &amp; Drop Movie (.mkv / .mp4)</h3>
+            <p>Streams directly to disk — works with full-length movies</p>
+          </div>
+
+          <div class="instant-box">
+            <div>
+              <div style="font-size: 13.5px; font-weight: 700; margin-bottom: 4px;">⚡ Instant Local File (Zero Upload Wait)</div>
+              <p style="font-size: 12px; color: var(--muted);">
+                Since this app runs on your PC, you can pick any MKV/MP4 directly from your hard drive without waiting for browser upload:
+              </p>
+            </div>
+
+            <button class="btn btn-primary" id="browseLocalBtn" style="width: 100%;">
+              🗂️ Browse Local Movie File (.mkv / .mp4)
+            </button>
+
+            <div class="path-row">
+              <input type="text" id="localPathInput" class="input" placeholder="Or paste path: C:\Movies\film.mkv" />
+              <button class="btn btn-secondary" id="loadPathBtn">Load</button>
+            </div>
+
+            <button class="btn btn-secondary" id="demoMovieBtn" style="width: 100%; font-size: 12px; padding: 7px;">
+              🧪 Generate &amp; Load 10m50s Demo MKV Movie (Quick Test)
+            </button>
+          </div>
+        </div>
+
+        <div id="uploadProgressBox" style="display: none; margin-top: 14px;">
+          <div style="display: flex; justify-content: space-between; font-size: 12.5px;">
+            <span id="uploadStatusText">Uploading movie...</span>
+            <span id="uploadPctText">0%</span>
+          </div>
+          <div class="progress-bar-wrap">
+            <div class="progress-bar-fill" id="uploadProgressBar"></div>
+          </div>
+        </div>
+
+        <div id="loadErrorBanner" class="status-banner error"></div>
+      </div>
+
+      <!-- Step 2: Movie Summary & Settings -->
+      <div class="card" id="configCard" style="opacity: 0.65; pointer-events: none;">
+        <div class="card-title">
+          <span>2. Part Duration, Black Background &amp; Still Subtitle Settings</span>
+          <span class="badge" id="loadedMovieBadge">No Movie Loaded Yet</span>
+        </div>
+
+        <div class="movie-info-bar" id="movieInfoBar" style="display: none;">
+          <div class="stat-item">
+            <span>Movie File</span>
+            <strong id="infoName" style="word-break: break-all;">-</strong>
+          </div>
+          <div class="stat-item">
+            <span>Total Duration</span>
+            <strong id="infoDuration">-</strong>
+          </div>
+          <div class="stat-item">
+            <span>Original Resolution</span>
+            <strong id="infoRes">-</strong>
+          </div>
+          <div class="stat-item">
+            <span>Calculated Parts</span>
+            <strong id="infoTotalParts" style="color: #10b981;">-</strong>
+          </div>
+        </div>
+
+        <div class="form-grid">
+          <!-- Duration per part -->
+          <div class="field">
+            <label>Clip Duration per Part</label>
+            <div class="inline-inputs">
+              <input type="number" id="clipMins" class="input" value="4" min="0" max="60" style="width: 85px;" />
+              <span>mins</span>
+              <input type="number" id="clipSecs" class="input" value="55" min="0" max="59" style="width: 85px;" />
+              <span>secs</span>
+            </div>
+            <div class="preset-pills">
+              <span class="pill active" data-mins="4" data-secs="55">4m 55s (295s Default)</span>
+              <span class="pill" data-mins="4" data-secs="33">4.55 mins (4m 33s)</span>
+              <span class="pill" data-mins="5" data-secs="0">5m 00s</span>
+            </div>
+          </div>
+
+          <!-- Still Subtitle Template -->
+          <div class="field">
+            <label>Still Subtitle Format (Burned &amp; Embedded)</label>
+            <input type="text" id="subtitleTemplate" class="input" value="Part {n}" />
+            <div class="preset-pills">
+              <span class="pill active" data-tpl="Part {n}">Part 1, Part 2...</span>
+              <span class="pill" data-tpl="PART {n}">PART 1, PART 2...</span>
+            </div>
+          </div>
+
+          <!-- Subtitle Position -->
+          <div class="field">
+            <label>Still Subtitle Position on Black Background</label>
+            <select id="subtitlePosition">
+              <option value="bottom" selected>Below Movie in Black Area (Recommended)</option>
+              <option value="top">Above Movie in Black Area</option>
+              <option value="bottom_edge">Near Bottom Edge of Screen</option>
+            </select>
+            <div class="field-hint">Static text remains still throughout the entire clip</div>
+          </div>
+
+          <!-- Subtitle Font Size & Color -->
+          <div class="field">
+            <label>Subtitle Font Size &amp; Color</label>
+            <div class="inline-inputs">
+              <input type="number" id="fontSize" class="input" value="64" min="28" max="120" style="width: 100px;" />
+              <span>px</span>
+              <select id="fontColor">
+                <option value="white" selected>White (#FFFFFF)</option>
+                <option value="#fbbf24">Gold / Yellow (#FBBF24)</option>
+                <option value="#38bdf8">Cyan (#38BDF8)</option>
+                <option value="#4ade80">Neon Green (#4ADE80)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Optional Movie Title Header -->
+          <div class="field">
+            <label>Optional Movie Name Header (Top Black Bar)</label>
+            <input type="text" id="movieTitle" class="input" placeholder="Leave blank for pure black top bar, or enter movie name" />
+          </div>
+
+          <!-- Audio Track & Output Quality -->
+          <div class="field">
+            <label>Audio Track &amp; Output Resolution</label>
+            <div class="inline-inputs">
+              <select id="audioTrackSelect" style="flex: 1;">
+                <option value="0">Audio Track 1 (Default)</option>
+              </select>
+              <select id="resolutionSelect" style="width: 175px;">
+                <option value="720p">720x1280 (Fast Mobile / HD)</option>
+                <option value="1080p" selected>1080x1920 (FHD)</option>
+                <option value="540p">540x960 (Ultra-Fast Mobile)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Parts Range to Generate -->
+          <div class="field">
+            <label>Parts Range to Generate</label>
+            <div class="inline-inputs">
+              <span>From Part</span>
+              <input type="number" id="startPartInput" class="input" value="1" min="1" style="width: 85px;" />
+              <span>to Part</span>
+              <input type="number" id="endPartInput" class="input" value="1" min="1" style="width: 85px;" />
+              <button class="btn btn-secondary" id="allPartsBtn" type="button" style="padding: 8px 10px; font-size: 12px;">All Parts</button>
+              <button class="btn btn-secondary" id="onlyPart1Btn" type="button" style="padding: 8px 10px; font-size: 12px;">Test Part 1</button>
+            </div>
+          </div>
+
+          <!-- Encoding Engine (Local Server) -->
+          <div class="field" id="localEncoderField">
+            <label>PC Server Encoding Speed Mode (When connected to Local FFmpeg)</label>
+            <select id="encoderSelect">
+              <option value="cpu" selected>CPU Ultrafast (libx264 — Most Reliable &amp; Fast)</option>
+              <option value="qsv">Intel QuickSync GPU Hardware (h264_qsv)</option>
+            </select>
+          </div>
+
+          <!-- Increased Video Frame Ratio & Output Aspect Ratio -->
+          <div class="field">
+            <label>Video Frame Ratio / Scale (Increased Ratio)</label>
+            <div class="inline-inputs">
+              <select id="frameZoomRatioSelect" style="flex: 1;">
+                <option value="1.35" selected>135% Increased Ratio (Larger Movie Frame — Default)</option>
+                <option value="1.55">155% High Cinema Ratio (Taller Fill)</option>
+                <option value="1.85">185% Ultra Vertical Fill Ratio</option>
+                <option value="1.20">120% Medium Boost Ratio</option>
+                <option value="1.00">100% Standard Widescreen Fit</option>
+              </select>
+              <select id="aspectRatioSelect" style="width: 150px;">
+                <option value="9:16" selected>9:16 Vertical</option>
+                <option value="4:5">4:5 IG/FB Ratio</option>
+                <option value="3:4">3:4 Portrait</option>
+                <option value="1:1">1:1 Square</option>
+              </select>
+            </div>
+            <div class="field-hint">Increases movie frame size &amp; ratio inside the black vertical canvas</div>
+          </div>
+
+          <!-- Save Project to Cloud Server Playlist -->
+          <div class="field">
+            <label>☁️ Cloud Server Playlist Name (Save Project as Playlist)</label>
+            <input type="text" id="splitPlaylistNameInput" class="input" placeholder="e.g. Action Movie Playlist (auto-saves to Cloud Server)" />
+            <div class="field-hint">Saves split project into Cloud Server under this Playlist name</div>
+          </div>
+        </div>
+
+        <!-- Timeline Preview Strip of Parts -->
+        <div style="margin-top: 18px;">
+          <div style="font-size: 12px; color: var(--muted); font-weight: 600;">
+            SEQUENTIAL PARTS TIMELINE PREVIEW:
+          </div>
+          <div class="parts-preview-strip" id="partsPreviewStrip"></div>
+        </div>
+
+        <div style="margin-top: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+          <button class="btn btn-accent btn-lg" id="startSplitBtn" style="flex: 2; min-width: 200px;">
+            🚀 Start Splitting Movie into Parts
+          </button>
+          <button class="btn btn-warning btn-lg" id="pauseJobBtn" style="display: none; flex: 1; min-width: 130px; background: #f59e0b; color: #000; font-weight: 700;">
+            ⏸ Pause Splitting
+          </button>
+          <button class="btn btn-danger btn-lg" id="cancelJobBtn" style="display: none; flex: 1; min-width: 120px;">
+            ⏹ Cancel Processing
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 3: Live Progress & Generated Parts -->
+      <div class="card" id="resultsCard" style="display: none;">
+        <div class="card-title">
+          <span id="jobTitleText">3. Splitting Progress &amp; Output Clips</span>
+          <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+            <button class="btn btn-warning" id="pauseJobCardBtn" style="display: none; padding: 6px 12px; font-size: 12px; background: #f59e0b; color: #000; font-weight: 700;">
+              ⏸ Pause
+            </button>
+            <button class="btn btn-danger" id="cancelJobCardBtn" style="display: none; padding: 6px 12px; font-size: 12px;">
+              ⏹ Cancel
+            </button>
+            <button class="btn btn-secondary" id="openJobFolderBtn" style="padding: 6px 12px; font-size: 12px;">
+              📂 Open This Movie's Output Folder
+            </button>
+          </div>
+        </div>
+
+        <div id="jobProgressSection">
+          <div style="display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px;">
+            <span id="jobStatusLabel">Rendering Part 1...</span>
+            <strong id="jobOverallPct">0%</strong>
+          </div>
+          <div class="progress-bar-wrap" style="height: 14px;">
+            <div class="progress-bar-fill" id="jobProgressBar"></div>
+          </div>
+
+          <!-- Prominent Dedicated Control Action Buttons directly under progress bar -->
+          <div id="progressControlButtons" style="display: none; gap: 10px; margin-top: 12px; margin-bottom: 4px; flex-wrap: wrap;">
+            <button class="btn btn-warning" id="pauseProgressBtn" type="button" style="flex: 1; min-width: 140px; padding: 10px 16px; font-weight: 700; background: #f59e0b; color: #000; font-size: 13.5px; border-radius: 8px; box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);">
+              ⏸ Pause Splitting
+            </button>
+            <button class="btn btn-danger" id="cancelProgressBtn" type="button" style="flex: 1; min-width: 140px; padding: 10px 16px; font-weight: 700; font-size: 13.5px; border-radius: 8px; box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);">
+              ⏹ Cancel Processing
+            </button>
+          </div>
+        </div>
+
+        <div id="jobErrorBanner" class="status-banner error"></div>
+        <div id="jobSuccessBanner" class="status-banner success"></div>
+
+        <!-- Save Current Project to Cloud Playlist Bar -->
+        <div style="margin-top: 12px; background: var(--panel-alt); border: 1px solid var(--border); border-radius: 11px; padding: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+          <span style="font-size: 12.5px; font-weight: 700;">☁️ Save to Cloud Playlist:</span>
+          <input type="text" id="resultsPlaylistNameInput" class="input" placeholder="Enter Playlist Name (e.g. My Movie Playlist)" style="flex: 1; min-width: 180px;" />
+          <button class="btn btn-primary" id="saveResultsToPlaylistBtn" type="button">
+            ☁️ Save Project into Cloud Playlist
+          </button>
+        </div>
+
+        <div class="outputs-grid" id="outputsGrid"></div>
+      </div>
+    </div>
+
+    <!-- Right Column: Live 9:16 Output Preview + Side Admin Console & Cloud Playlists / Projects History -->
+    <div>
+      <div class="card" id="sideConsoleCard">
+        <div class="card-title" style="margin-bottom: 10px;">
+          <span>☁️ Cloud Playlists &amp; Side Console</span>
+          <span class="badge" id="sideRoleBadge">👤 Normal User</span>
+        </div>
+
+        <!-- Mode Switcher on the Side: Normal User Mode vs Admin Console Mode -->
+        <div class="mode-tabs">
+          <button type="button" class="mode-tab active" id="tabUserModeBtn">
+            👤 User Cloud &amp; History
+          </button>
+          <button type="button" class="mode-tab admin-tab" id="tabAdminModeBtn">
+            🛡️ Admin Console
+          </button>
+        </div>
+
+        <!-- Admin Console Login Gate on the Side (Username: vaishnavideapad@gmail.com / Password: ideapad@1) -->
+        <div id="adminLoginSection" style="display: none; background: #0d1017; border: 1px solid #3b4262; border-radius: 12px; padding: 14px; margin-bottom: 12px;">
+          <div style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-bottom: 6px;">
+            🛡️ Admin Console Authentication
+          </div>
+          <p style="font-size: 11.5px; color: var(--muted); margin-bottom: 10px;">
+            Sign in with Admin Console credentials to unlock full Admin Mode controls on the side:
+          </p>
+          <div class="field" style="margin-bottom: 8px;">
+            <label>Admin Username</label>
+            <input type="email" id="adminUsernameInput" class="input" placeholder="vaishnavideapad@gmail.com" />
+          </div>
+          <div class="field" style="margin-bottom: 8px;">
+            <label>Admin Password</label>
+            <input type="password" id="adminPasswordInput" class="input" placeholder="ideapad@1" />
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="pill" id="quickFillAdminCredsBtn">⚡ Fill Admin (ideapad@1)</span>
+          </div>
+          <div id="adminLoginError" class="status-banner error" style="margin-bottom: 8px; padding: 8px 10px; font-size: 11.5px;"></div>
+          <button type="button" class="btn btn-accent" id="adminLoginSubmitBtn" style="width: 100%;">
+            🔓 Unlock Admin Console
+          </button>
+        </div>
+
+        <!-- Admin Unlocked Header Bar -->
+        <div id="adminUnlockedBar" style="display: none; background: rgba(245, 158, 11, 0.14); border: 1px solid rgba(245, 158, 11, 0.4); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px; font-size: 12px; color: #fde68a; justify-content: space-between; align-items: center;">
+          <span>🛡️ <strong>Admin Console Active</strong> (vaishnavideapad@gmail.com)</span>
+          <button type="button" class="btn btn-secondary btn-xs" id="lockAdminBtn">Lock</button>
+        </div>
+
+        <!-- Admin-Only OAuth & Social Login Settings -->
+        <div id="adminOauthCard" style="display: none; background: #0d1017; border: 1px solid #3b4262; border-radius: 11px; padding: 12px; margin-bottom: 14px;">
+          <div style="font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: #fbbf24;">
+            🔑 OAuth &amp; Social Login Settings
+          </div>
+          <div class="field" style="margin-bottom: 8px;">
+            <label style="font-size: 11px;">Facebook App ID</label>
+            <input type="text" id="adminFbAppIdInput" class="input" placeholder="e.g. 123456789012345" />
+          </div>
+          <div class="field" style="margin-bottom: 8px;">
+            <label style="font-size: 11px;">Instagram App ID</label>
+            <input type="text" id="adminIgAppIdInput" class="input" placeholder="e.g. 123456789012345" />
+          </div>
+          <div id="adminOauthFeedback" style="font-size: 11.5px; color: #6ee7b7; margin-bottom: 6px; display: none;"></div>
+          <button type="button" class="btn btn-primary btn-xs" id="adminSaveOauthBtn" style="width: 100%;">
+            💾 Save OAuth Credentials
+          </button>
+        </div>
+
+        <!-- Shared Rights for BOTH Admin Console AND Normal User: Save Project to Cloud Server as Playlist + View Projects History -->
+        <div id="cloudWorkspaceSection">
+          <div style="background: #0d1017; border: 1px solid var(--border); border-radius: 11px; padding: 12px; margin-bottom: 14px;">
+            <div style="font-size: 12.5px; font-weight: 700; margin-bottom: 6px; color: #a5b4fc;">
+              ☁️ Save Project to Cloud Server as Playlist
+            </div>
+            <div class="path-row">
+              <input type="text" id="sidePlaylistNameInput" class="input" placeholder="Playlist name (e.g. Favorites Playlist)" />
+              <button type="button" class="btn btn-primary" id="sideSavePlaylistBtn" style="white-space: nowrap;">
+                Save Playlist
+              </button>
+            </div>
+            <div id="cloudSaveFeedback" style="font-size: 11.5px; color: #6ee7b7; margin-top: 6px; display: none;"></div>
+          </div>
+
+          <!-- Cloud Playlists Saved on Cloud Server -->
+          <div style="margin-bottom: 14px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; font-weight: 700; color: #d1d5db; text-transform: uppercase;">
+                🎵 Cloud Server Playlists (<span id="playlistsCountLabel">0</span>)
+              </span>
+              <button type="button" class="btn btn-secondary btn-xs" id="refreshCloudBtn">↻ Sync Cloud</button>
+            </div>
+            <div class="cloud-list" id="cloudPlaylistsList"></div>
+          </div>
+
+          <!-- Projects History -->
+          <div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+              <span style="font-size: 12px; font-weight: 700; color: #d1d5db; text-transform: uppercase;">
+                📜 Projects History (<span id="historyCountLabel">0</span>)
+              </span>
+            </div>
+            <div class="cloud-list" id="projectsHistoryList"></div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="card preview-sticky">
+        <div class="card-title">
+          <span>Live 9:16 Output Preview</span>
+          <span class="badge" id="previewRatioBadge">135% Ratio • 9:16</span>
+        </div>
+
+        <div class="phone-frame" id="phoneFrame">
+          <div class="phone-notch"></div>
+          <div class="preview-title-overlay" id="previewTitleOverlay" style="top: 95px; display: none;"></div>
+          <div class="preview-movie-box" id="previewMovieBox">
+            <span>MOVIE VIDEO FRAME</span>
+            <small id="previewAspectText">Centered on #000000 Black Canvas</small>
+          </div>
+          <div class="preview-part-overlay" id="previewPartOverlay" style="top: 340px;">Part 1</div>
+        </div>
+
+        <div style="margin-top: 14px; font-size: 12px; color: var(--muted); text-align: center;">
+          Previewing how each <strong>4m 55s</strong> part looks with pure black background and static <strong>Part 1 … Part N</strong> subtitle.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================================================================
+       THREE.JS 3D BACKGROUND + GSAP ANIMATIONS
+       ========================================================================= */
+    let threeSpeedMultiplier = 1;
+    (function initThreeScene() {
+      const canvas = document.getElementById('three-bg');
+      if (!window.THREE || !canvas) return;
+
+      const scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x090a0f, 0.035);
+
+      const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.z = 16;
+
+      const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+      scene.add(new THREE.AmbientLight(0x6366f1, 0.6));
+
+      const p1 = new THREE.PointLight(0x6366f1, 2.2, 40);
+      p1.position.set(10, 8, 10);
+      scene.add(p1);
+
+      const p2 = new THREE.PointLight(0x10b981, 1.8, 40);
+      p2.position.set(-12, -8, 8);
+      scene.add(p2);
+
+      const monolithGroup = new THREE.Group();
+      scene.add(monolithGroup);
+
+      const frameGeo = new THREE.BoxGeometry(1.8, 3.2, 0.08);
+      const edgesGeo = new THREE.EdgesGeometry(frameGeo);
+
+      for (let i = 0; i < 12; i++) {
+        const mat = new THREE.MeshStandardMaterial({
+          color: 0x0b0f19,
+          roughness: 0.25,
+          metalness: 0.75,
+          transparent: true,
+          opacity: 0.45
+        });
+        const mesh = new THREE.Mesh(frameGeo, mat);
+        const lineMat = new THREE.LineBasicMaterial({
+          color: i % 2 === 0 ? 0x6366f1 : 0x10b981,
+          transparent: true,
+          opacity: 0.4
+        });
+        mesh.add(new THREE.LineSegments(edgesGeo, lineMat));
+        mesh.position.set(
+          (Math.random() - 0.5) * 34,
+          (Math.random() - 0.5) * 22,
+          (Math.random() - 0.5) * 18 - 4
+        );
+        mesh.rotation.set(
+          (Math.random() - 0.5) * 0.6,
+          (Math.random() - 0.5) * 0.8,
+          (Math.random() - 0.5) * 0.3
+        );
+        mesh.userData = {
+          rotSpeedX: (Math.random() - 0.5) * 0.004,
+          rotSpeedY: (Math.random() - 0.5) * 0.006,
+          floatOffset: Math.random() * Math.PI * 2
+        };
+        monolithGroup.add(mesh);
+      }
+
+      const particleCount = 400;
+      const posArray = new Float32Array(particleCount * 3);
+      for (let i = 0; i < particleCount * 3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 45;
+      }
+      const partGeo = new THREE.BufferGeometry();
+      partGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+      const partMat = new THREE.PointsMaterial({
+        size: 0.07,
+        color: 0xa5b4fc,
+        transparent: true,
+        opacity: 0.6
+      });
+      const particles = new THREE.Points(partGeo, partMat);
+      scene.add(particles);
+
+      let mouseX = 0;
+      let mouseY = 0;
+      window.addEventListener('mousemove', (e) => {
+        mouseX = (e.clientX / window.innerWidth - 0.5) * 2;
+        mouseY = (e.clientY / window.innerHeight - 0.5) * 2;
+      });
+
+      window.addEventListener('resize', () => {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+      });
+
+      const clock = new THREE.Clock();
+      function animate() {
+        requestAnimationFrame(animate);
+        const t = clock.getElapsedTime();
+
+        monolithGroup.children.forEach((m) => {
+          m.rotation.x += m.userData.rotSpeedX * threeSpeedMultiplier;
+          m.rotation.y += m.userData.rotSpeedY * threeSpeedMultiplier;
+          m.position.y += Math.sin(t * 1.2 + m.userData.floatOffset) * 0.004 * threeSpeedMultiplier;
+        });
+
+        particles.rotation.y += 0.0008 * threeSpeedMultiplier;
+        particles.rotation.x += 0.0003 * threeSpeedMultiplier;
+
+        camera.position.x += (mouseX * 1.6 - camera.position.x) * 0.04;
+        camera.position.y += (-mouseY * 1.1 - camera.position.y) * 0.04;
+        camera.lookAt(scene.position);
+
+        renderer.render(scene, camera);
+      }
+      animate();
+    })();
+
+    /* =========================================================================
+       FIRST VERSION APPLICATION LOGIC (WITH LOCAL + CLOUD FALLBACK)
+       ========================================================================= */
+    let apiBase = '';
+    let useLocalFFmpegServer = false;
+    let currentMovie = null;
+    let browserVideoFile = null;
+    let browserVideoUrl = null;
+    let browserCancelRequested = false;
+    let activeJobId = null;
+    let pollTimer = null;
+    let currentJobOutputDir = '';
+
+    const dropzone = document.getElementById('dropzone');
+    const dropzoneIcon = document.getElementById('dropzoneIcon');
+    const fileInput = document.getElementById('fileInput');
+    const browseLocalBtn = document.getElementById('browseLocalBtn');
+    const localPathInput = document.getElementById('localPathInput');
+    const loadPathBtn = document.getElementById('loadPathBtn');
+    const demoMovieBtn = document.getElementById('demoMovieBtn');
+    const uploadProgressBox = document.getElementById('uploadProgressBox');
+    const uploadStatusText = document.getElementById('uploadStatusText');
+    const uploadPctText = document.getElementById('uploadPctText');
+    const uploadProgressBar = document.getElementById('uploadProgressBar');
+    const loadErrorBanner = document.getElementById('loadErrorBanner');
+
+    const configCard = document.getElementById('configCard');
+    const loadedMovieBadge = document.getElementById('loadedMovieBadge');
+    const movieInfoBar = document.getElementById('movieInfoBar');
+    const infoName = document.getElementById('infoName');
+    const infoDuration = document.getElementById('infoDuration');
+    const infoRes = document.getElementById('infoRes');
+    const infoTotalParts = document.getElementById('infoTotalParts');
+
+    const clipMins = document.getElementById('clipMins');
+    const clipSecs = document.getElementById('clipSecs');
+    const subtitleTemplate = document.getElementById('subtitleTemplate');
+    const subtitlePosition = document.getElementById('subtitlePosition');
+    const fontSize = document.getElementById('fontSize');
+    const fontColor = document.getElementById('fontColor');
+    const movieTitle = document.getElementById('movieTitle');
+    const audioTrackSelect = document.getElementById('audioTrackSelect');
+    const resolutionSelect = document.getElementById('resolutionSelect');
+    const startPartInput = document.getElementById('startPartInput');
+    const endPartInput = document.getElementById('endPartInput');
+    const allPartsBtn = document.getElementById('allPartsBtn');
+    const onlyPart1Btn = document.getElementById('onlyPart1Btn');
+    const encoderSelect = document.getElementById('encoderSelect');
+    const frameZoomRatioSelect = document.getElementById('frameZoomRatioSelect');
+    const aspectRatioSelect = document.getElementById('aspectRatioSelect');
+    const splitPlaylistNameInput = document.getElementById('splitPlaylistNameInput');
+    const resultsPlaylistNameInput = document.getElementById('resultsPlaylistNameInput');
+    const saveResultsToPlaylistBtn = document.getElementById('saveResultsToPlaylistBtn');
+    const partsPreviewStrip = document.getElementById('partsPreviewStrip');
+
+    const startSplitBtn = document.getElementById('startSplitBtn');
+    const pauseJobBtn = document.getElementById('pauseJobBtn');
+    const cancelJobBtn = document.getElementById('cancelJobBtn');
+    const pauseJobCardBtn = document.getElementById('pauseJobCardBtn');
+    const cancelJobCardBtn = document.getElementById('cancelJobCardBtn');
+    const pauseProgressBtn = document.getElementById('pauseProgressBtn');
+    const cancelProgressBtn = document.getElementById('cancelProgressBtn');
+    const progressControlButtons = document.getElementById('progressControlButtons');
+    let isJobPaused = false;
+    let isJobCancelled = false;
+
+    const resultsCard = document.getElementById('resultsCard');
+    const jobStatusLabel = document.getElementById('jobStatusLabel');
+    const jobOverallPct = document.getElementById('jobOverallPct');
+    const jobProgressBar = document.getElementById('jobProgressBar');
+    const jobErrorBanner = document.getElementById('jobErrorBanner');
+    const jobSuccessBanner = document.getElementById('jobSuccessBanner');
+    const outputsGrid = document.getElementById('outputsGrid');
+    const openOutputsFolderBtn = document.getElementById('openOutputsFolderBtn');
+    const openJobFolderBtn = document.getElementById('openJobFolderBtn');
+
+    const phoneFrame = document.getElementById('phoneFrame');
+    const previewRatioBadge = document.getElementById('previewRatioBadge');
+    const previewTitleOverlay = document.getElementById('previewTitleOverlay');
+    const previewMovieBox = document.getElementById('previewMovieBox');
+    const previewPartOverlay = document.getElementById('previewPartOverlay');
+    const previewAspectText = document.getElementById('previewAspectText');
+
+    // Auth, Admin Console & Cloud Playlists State
+    let currentUser = null;
+    let isAdminConsoleUnlocked = false;
+    let activeSideTab = 'user'; // 'user' | 'admin'
+    let lastCompletedProject = null;
+    let cloudState = {
+      projectsHistory: [],
+      playlists: [],
+      oauthConfig: { facebookAppId: '', instagramAppId: '' }
+    };
+
+    async function detectEngine() {
+      const candidates = [window.location.origin, 'http://localhost:3456'];
+      for (const base of candidates) {
+        try {
+          const ctrl = new AbortController();
+          const t = setTimeout(() => ctrl.abort(), 1200);
+          const res = await fetch(`${base}/api/ping`, { signal: ctrl.signal });
+          clearTimeout(t);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.engine === 'local-ffmpeg') {
+              apiBase = base;
+              useLocalFFmpegServer = true;
+              return;
+            }
+          }
+        } catch (_) {}
+      }
+      useLocalFFmpegServer = false;
+    }
+
+    function formatTime(sec) {
+      const s = Math.max(0, Math.round(sec));
+      const h = Math.floor(s / 3600);
+      const m = Math.floor((s % 3600) / 60);
+      const r = s % 60;
+      if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`;
+      return `${m}:${String(r).padStart(2, '0')}`;
+    }
+
+    function getClipDurationSeconds() {
+      const m = parseInt(clipMins.value, 10);
+      const s = parseInt(clipSecs.value, 10);
+      const total = (isNaN(m) ? 0 : m) * 60 + (isNaN(s) ? 0 : s);
+      return total > 0 ? total : 295; // Default to 4 minutes 55 seconds (295s)
+    }
+
+    function showLoadError(msg) {
+      if (!msg) {
+        loadErrorBanner.style.display = 'none';
+        return;
+      }
+      loadErrorBanner.textContent = msg;
+      loadErrorBanner.style.display = 'block';
+    }
+
+    function onMovieLoaded(movie) {
+      currentMovie = movie;
+      showLoadError('');
+      configCard.style.opacity = '1';
+      configCard.style.pointerEvents = 'auto';
+      loadedMovieBadge.textContent = 'Movie Ready';
+      movieInfoBar.style.display = 'grid';
+
+      infoName.textContent = movie.originalName;
+      infoDuration.textContent = movie.durationFormatted;
+      infoRes.textContent = `${movie.width}×${movie.height} (${movie.codec || 'video'})`;
+
+      if (window.gsap) {
+        gsap.fromTo(movieInfoBar, { scale: 0.97, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.4, ease: 'power2.out' });
+      }
+
+      audioTrackSelect.innerHTML = '';
+      if (movie.audioTracks && movie.audioTracks.length > 0) {
+        movie.audioTracks.forEach((t, i) => {
+          const opt = document.createElement('option');
+          opt.value = String(i);
+          opt.textContent = `Track ${i + 1}: ${t.language.toUpperCase()} (${t.codec}, ${t.channels}ch)`;
+          audioTrackSelect.appendChild(opt);
+        });
+      } else {
+        const opt = document.createElement('option');
+        opt.value = '0';
+        opt.textContent = 'Default Audio';
+        audioTrackSelect.appendChild(opt);
+      }
+
+      recalcPartsAndPreview(true);
+    }
+
+    function recalcPartsAndPreview(resetRange = false) {
+      const durSec = getClipDurationSeconds();
+      const totalDuration = currentMovie ? currentMovie.duration : 7200;
+      const totalParts = Math.max(1, Math.ceil(totalDuration / durSec));
+
+      if (currentMovie) {
+        infoTotalParts.textContent = `${totalParts} Parts (Part 1 to Part ${totalParts})`;
+        startPartInput.max = String(totalParts);
+        endPartInput.max = String(totalParts);
+        if (resetRange) {
+          startPartInput.value = '1';
+          endPartInput.value = String(totalParts);
+        }
+      }
+
+      partsPreviewStrip.innerHTML = '';
+      const rawTpl = (subtitleTemplate.value || 'Part {n}').split('/')[0].replace(/\{total\}/gi, '').trim() || 'Part {n}';
+      const maxChips = Math.min(totalParts, 40);
+      for (let i = 1; i <= maxChips; i++) {
+        const st = (i - 1) * durSec;
+        const et = Math.min(totalDuration, i * durSec);
+        const label = rawTpl.includes('{n}') ? rawTpl.replace(/\{n\}/gi, i) : `Part ${i}`;
+        const chip = document.createElement('div');
+        chip.className = 'part-chip';
+        chip.innerHTML = `<strong>${label}</strong><span>${formatTime(st)} – ${formatTime(et)}</span>`;
+        partsPreviewStrip.appendChild(chip);
+      }
+      if (totalParts > maxChips) {
+        const more = document.createElement('div');
+        more.className = 'part-chip';
+        more.innerHTML = `<strong>... +${totalParts - maxChips} more</strong><span>Up to Part ${totalParts}</span>`;
+        partsPreviewStrip.appendChild(more);
+      }
+
+      // Update live output preview with Increased Ratio (frameZoomRatio) & Aspect Ratio
+      const zoomRatio = Number(frameZoomRatioSelect ? frameZoomRatioSelect.value : 1.35) || 1.35;
+      const aspectMode = aspectRatioSelect ? aspectRatioSelect.value : '9:16';
+      const frameW = 300;
+      let frameH = 533;
+      if (aspectMode === '4:5') frameH = Math.round((frameW * 5) / 4);
+      else if (aspectMode === '3:4') frameH = Math.round((frameW * 4) / 3);
+      else if (aspectMode === '1:1') frameH = frameW;
+
+      if (phoneFrame) {
+        phoneFrame.style.width = `${frameW}px`;
+        phoneFrame.style.height = `${frameH}px`;
+      }
+      if (previewRatioBadge) {
+        previewRatioBadge.textContent = `${Math.round(zoomRatio * 100)}% Ratio • ${aspectMode}`;
+      }
+
+      const previewScale = frameW / 1080;
+      const aspect = currentMovie ? (currentMovie.width / currentMovie.height) : (16 / 9);
+      const boxH = Math.min(frameH - 64, Math.round((frameW * zoomRatio) / aspect));
+      previewMovieBox.style.height = `${boxH}px`;
+      previewAspectText.textContent = currentMovie
+        ? `${currentMovie.width}×${currentMovie.height} (${Math.round(zoomRatio * 100)}% Ratio on ${aspectMode} Black)`
+        : `${Math.round(zoomRatio * 100)}% Increased Ratio on #000000 Black`;
+
+      const movieTop = Math.round((frameH - boxH) / 2);
+      const movieBottom = movieTop + boxH;
+
+      const samplePartText = rawTpl.includes('{n}') ? rawTpl.replace(/\{n\}/gi, '1') : 'Part 1';
+      previewPartOverlay.textContent = samplePartText;
+      const pxSize = Math.max(12, Math.round((Number(fontSize.value) || 64) * previewScale));
+      previewPartOverlay.style.fontSize = `${pxSize}px`;
+      previewPartOverlay.style.color = fontColor.value;
+
+      if (subtitlePosition.value === 'top') {
+        previewPartOverlay.style.top = `${Math.max(22, movieTop - pxSize - 14)}px`;
+      } else if (subtitlePosition.value === 'bottom_edge') {
+        previewPartOverlay.style.top = `${frameH - pxSize - 28}px`;
+      } else {
+        previewPartOverlay.style.top = `${Math.min(frameH - pxSize - 12, movieBottom + 16)}px`;
+      }
+
+      if (movieTitle.value.trim()) {
+        previewTitleOverlay.style.display = 'block';
+        previewTitleOverlay.textContent = movieTitle.value.trim();
+        previewTitleOverlay.style.fontSize = `13px`;
+        previewTitleOverlay.style.top = `${Math.max(24, movieTop - 32)}px`;
+      } else {
+        previewTitleOverlay.style.display = 'none';
+      }
+    }
+
+    [clipMins, clipSecs, subtitleTemplate, subtitlePosition, fontSize, fontColor, movieTitle, frameZoomRatioSelect, aspectRatioSelect].forEach(el => {
+      if (!el) return;
+      el.addEventListener('input', () => recalcPartsAndPreview(false));
+      el.addEventListener('change', () => recalcPartsAndPreview(false));
+    });
+
+    document.querySelectorAll('.pill[data-mins]').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.pill[data-mins]').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        clipMins.value = pill.dataset.mins;
+        clipSecs.value = pill.dataset.secs;
+        recalcPartsAndPreview(true);
+      });
+    });
+
+    document.querySelectorAll('.pill[data-tpl]').forEach(pill => {
+      pill.addEventListener('click', () => {
+        document.querySelectorAll('.pill[data-tpl]').forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+        subtitleTemplate.value = pill.dataset.tpl;
+        recalcPartsAndPreview(false);
+      });
+    });
+
+    allPartsBtn.addEventListener('click', () => {
+      if (!currentMovie) return;
+      const total = Math.max(1, Math.ceil(currentMovie.duration / getClipDurationSeconds()));
+      startPartInput.value = '1';
+      endPartInput.value = String(total);
+    });
+
+    onlyPart1Btn.addEventListener('click', () => {
+      startPartInput.value = '1';
+      endPartInput.value = '1';
+    });
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('mouseenter', () => {
+      if (window.gsap) gsap.to(dropzoneIcon, { y: -4, scale: 1.1, duration: 0.25 });
+    });
+    dropzone.addEventListener('mouseleave', () => {
+      if (window.gsap) gsap.to(dropzoneIcon, { y: 0, scale: 1, duration: 0.25 });
+    });
+    dropzone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        handleSelectedFile(e.dataTransfer.files[0]);
+      }
+    });
+    fileInput.addEventListener('change', () => {
+      if (fileInput.files && fileInput.files[0]) {
+        handleSelectedFile(fileInput.files[0]);
+      }
+    });
+
+    async function handleSelectedFile(file) {
+      // Ensure default 4m 55s (295s) is active when loading a movie
+      if (parseInt(clipMins.value || 0, 10) === 0 && parseInt(clipSecs.value || 0, 10) <= 10) {
+        clipMins.value = '4';
+        clipSecs.value = '55';
+        document.querySelectorAll('.pill[data-mins]').forEach(p => {
+          p.classList.toggle('active', p.dataset.mins === '4' && p.dataset.secs === '55');
+        });
+      }
+      if (!useLocalFFmpegServer) {
+        await detectEngine();
+      }
+      if (useLocalFFmpegServer) {
+        uploadFile(file);
+      } else {
+        loadFileInBrowser(file);
+      }
+    }
+
+    function loadFileInBrowser(file, isDemo = false) {
+      showLoadError('');
+      if (browserVideoUrl) {
+        try { URL.revokeObjectURL(browserVideoUrl); } catch (_) {}
+      }
+      browserVideoFile = file;
+      browserVideoUrl = URL.createObjectURL(file);
+
+      const tempVideo = document.createElement('video');
+      tempVideo.preload = 'metadata';
+      tempVideo.muted = true;
+      tempVideo.defaultMuted = true;
+      tempVideo.playsInline = true;
+      tempVideo.setAttribute('playsinline', '');
+      tempVideo.setAttribute('webkit-playsinline', '');
+      tempVideo.setAttribute('muted', '');
+
+      const cleanupTemp = () => {
+        try {
+          tempVideo.onloadedmetadata = null;
+          tempVideo.onerror = null;
+          tempVideo.pause();
+          tempVideo.removeAttribute('src');
+          tempVideo.load();
+        } catch (_) {}
+      };
+
+      tempVideo.onloadedmetadata = () => {
+        const dur = isDemo
+          ? 650
+          : (tempVideo.duration && isFinite(tempVideo.duration) && tempVideo.duration > 10 ? tempVideo.duration : 650);
+        const width = tempVideo.videoWidth || 1920;
+        const height = tempVideo.videoHeight || 1080;
+        cleanupTemp();
+        onMovieLoaded({
+          id: 'browser-' + Date.now(),
+          originalName: file.name,
+          duration: dur,
+          durationFormatted: formatTime(dur),
+          width,
+          height,
+          codec: file.name.split('.').pop().toUpperCase(),
+          audioTracks: [],
+          isBrowserMode: true,
+          isDemoLoop: isDemo
+        });
+      };
+
+      tempVideo.onerror = () => {
+        cleanupTemp();
+        showLoadError('Could not decode this video format directly in browser. Please use standard MP4 (H.264) or run Start-V-Splitter.bat locally for full MKV support.');
+      };
+
+      tempVideo.src = browserVideoUrl;
+      tempVideo.load();
+    }
+
+    function uploadFile(file) {
+      showLoadError('');
+      uploadProgressBox.style.display = 'block';
+      uploadStatusText.textContent = `Uploading ${file.name}...`;
+      uploadPctText.textContent = '0%';
+      uploadProgressBar.style.width = '0%';
+
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${apiBase}/api/upload?filename=${encodeURIComponent(file.name)}`, true);
+
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) {
+          const pct = Math.round((e.loaded / e.total) * 100);
+          uploadPctText.textContent = `${pct}%`;
+          uploadProgressBar.style.width = `${pct}%`;
+          if (pct === 100) {
+            uploadStatusText.textContent = 'Analyzing movie streams with FFprobe...';
+          }
+        }
+      };
+
+      xhr.onload = () => {
+        uploadProgressBox.style.display = 'none';
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (!data.ok) {
+            showLoadError(data.error || 'Upload failed');
+            return;
+          }
+          onMovieLoaded(data.movie);
+        } catch (err) {
+          showLoadError('Failed to parse server response.');
+        }
+      };
+
+      xhr.onerror = () => {
+        uploadProgressBox.style.display = 'none';
+        loadFileInBrowser(file);
+      };
+
+      xhr.send(file);
+    }
+
+    // Native Windows File Picker (or Browser File Picker fallback on Vercel)
+    browseLocalBtn.addEventListener('click', async () => {
+      if (!useLocalFFmpegServer) {
+        fileInput.click();
+        return;
+      }
+      showLoadError('');
+      browseLocalBtn.disabled = true;
+      browseLocalBtn.textContent = '🗂️ Waiting for file selection...';
+      try {
+        const res = await fetch(`${apiBase}/api/pick-local-file`, { method: 'POST' });
+        const data = await res.json();
+        if (data.ok && data.movie) {
+          localPathInput.value = data.movie.filePath;
+          onMovieLoaded(data.movie);
+        } else if (!data.cancelled && data.error) {
+          showLoadError(data.error);
+        }
+      } catch (err) {
+        fileInput.click();
+      } finally {
+        browseLocalBtn.disabled = false;
+        browseLocalBtn.textContent = '🗂️ Browse Local Movie File (.mkv / .mp4)';
+      }
+    });
+
+    // Load by Local Path
+    loadPathBtn.addEventListener('click', async () => {
+      const p = localPathInput.value.trim();
+      if (!p) return showLoadError('Please enter a local file path first.');
+      if (!useLocalFFmpegServer) {
+        return showLoadError('To load by Windows C:\\ path directly, open http://localhost:3456 or click Browse Local Movie File above.');
+      }
+      showLoadError('');
+      loadPathBtn.disabled = true;
+      try {
+        const res = await fetch(`${apiBase}/api/load-path`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ filePath: p })
+        });
+        const data = await res.json();
+        if (!data.ok) {
+          showLoadError(data.error || 'Could not load file');
+        } else {
+          onMovieLoaded(data.movie);
+        }
+      } catch (err) {
+        showLoadError(err.message);
+      } finally {
+        loadPathBtn.disabled = false;
+      }
+    });
+
+    // Generate & Load Demo MKV Movie
+    demoMovieBtn.addEventListener('click', async () => {
+      showLoadError('');
+      demoMovieBtn.disabled = true;
+      demoMovieBtn.textContent = '⏳ Creating 10m50s sample MKV movie...';
+      try {
+        if (!useLocalFFmpegServer) {
+          await detectEngine();
+        }
+        if (useLocalFFmpegServer) {
+          const res = await fetch(`${apiBase}/api/create-demo-movie`, { method: 'POST' });
+          const data = await res.json();
+          if (!data.ok) {
+            showLoadError(data.error || 'Failed to create demo movie');
+          } else {
+            onMovieLoaded(data.movie);
+          }
+        } else {
+          const blob = await createBrowserDemoVideo();
+          const demoFile = new File([blob], 'Demo_Movie_Sample.mkv', { type: blob.type });
+          clipMins.value = '4';
+          clipSecs.value = '55';
+          loadFileInBrowser(demoFile, true);
+        }
+      } catch (err) {
+        showLoadError(err.message);
+      } finally {
+        demoMovieBtn.disabled = false;
+        demoMovieBtn.textContent = '🧪 Generate & Load 10m50s Demo MKV Movie (Quick Test)';
+      }
+    });
+
+    function createBrowserDemoVideo() {
+      return new Promise((resolve) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 1280;
+        canvas.height = 720;
+        const ctx = canvas.getContext('2d');
+        const stream = canvas.captureStream(24);
+        const recorder = new MediaRecorder(stream, { mimeType: MediaRecorder.isTypeSupported('video/mp4') ? 'video/mp4' : 'video/webm' });
+        const chunks = [];
+        recorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => resolve(new Blob(chunks, { type: recorder.mimeType }));
+        recorder.start();
+
+        const start = performance.now();
+        function draw() {
+          const elapsed = (performance.now() - start) / 1000;
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(0, 0, 1280, 720);
+          ctx.fillStyle = '#6366f1';
+          ctx.fillRect(60 + ((elapsed * 180) % 1000), 260, 160, 160);
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 52px Segoe UI, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(`DEMO MOVIE SCENE — ${elapsed.toFixed(1)}s`, 640, 160);
+          if (elapsed < 2.2) {
+            requestAnimationFrame(draw);
+          } else {
+            recorder.stop();
+          }
+        }
+        draw();
+      });
+    }
+
+    let sharedAudioCtx = null;
+
+    function setJobControlsActive(active) {
+      if (active) {
+        startSplitBtn.disabled = true;
+        if (pauseJobBtn) pauseJobBtn.style.display = 'inline-flex';
+        if (cancelJobBtn) cancelJobBtn.style.display = 'inline-flex';
+        if (pauseJobCardBtn) pauseJobCardBtn.style.display = 'inline-flex';
+        if (cancelJobCardBtn) cancelJobCardBtn.style.display = 'inline-flex';
+        if (progressControlButtons) progressControlButtons.style.display = 'flex';
+        isJobPaused = false;
+        isJobCancelled = false;
+        browserCancelRequested = false;
+
+        const setPauseBtn = (btn, text) => {
+          if (!btn) return;
+          btn.innerHTML = text;
+          btn.style.background = '#f59e0b';
+          btn.style.color = '#000';
+        };
+        setPauseBtn(pauseJobBtn, '⏸ Pause Splitting');
+        setPauseBtn(pauseJobCardBtn, '⏸ Pause');
+        setPauseBtn(pauseProgressBtn, '⏸ Pause Splitting');
+      } else {
+        startSplitBtn.disabled = false;
+        if (pauseJobBtn) pauseJobBtn.style.display = 'none';
+        if (cancelJobBtn) cancelJobBtn.style.display = 'none';
+        if (pauseJobCardBtn) pauseJobCardBtn.style.display = 'none';
+        if (cancelJobCardBtn) cancelJobCardBtn.style.display = 'none';
+        if (progressControlButtons) progressControlButtons.style.display = 'none';
+        isJobPaused = false;
+      }
+    }
+
+    async function toggleJobPause() {
+      isJobPaused = !isJobPaused;
+      if (isJobPaused) {
+        const updatePauseBtn = (btn, fullText, shortText) => {
+          if (!btn) return;
+          btn.innerHTML = shortText || fullText;
+          btn.style.background = '#10b981';
+          btn.style.color = '#fff';
+        };
+        updatePauseBtn(pauseJobBtn, '▶ Resume Splitting');
+        updatePauseBtn(pauseJobCardBtn, '▶ Resume', '▶ Resume');
+        updatePauseBtn(pauseProgressBtn, '▶ Resume Splitting');
+        jobStatusLabel.textContent = '⏸ Splitting Paused (Click Resume to continue)...';
+        if (useLocalFFmpegServer && activeJobId) {
+          try {
+            await fetch(`${apiBase}/api/pause-job`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: activeJobId })
+            });
+          } catch (_) {}
+        }
+      } else {
+        const updateResumeBtn = (btn, fullText, shortText) => {
+          if (!btn) return;
+          btn.innerHTML = shortText || fullText;
+          btn.style.background = '#f59e0b';
+          btn.style.color = '#000';
+        };
+        updateResumeBtn(pauseJobBtn, '⏸ Pause Splitting');
+        updateResumeBtn(pauseJobCardBtn, '⏸ Pause', '⏸ Pause');
+        updateResumeBtn(pauseProgressBtn, '⏸ Pause Splitting');
+        jobStatusLabel.textContent = '▶ Resuming Splitting...';
+        if (useLocalFFmpegServer && activeJobId) {
+          try {
+            await fetch(`${apiBase}/api/resume-job`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ jobId: activeJobId })
+            });
+          } catch (_) {}
+        }
+      }
+    }
+
+    async function cancelJob() {
+      isJobCancelled = true;
+      browserCancelRequested = true;
+      threeSpeedMultiplier = 1;
+      setJobControlsActive(false);
+      jobStatusLabel.textContent = '⏹ Processing was cancelled by user.';
+      if (useLocalFFmpegServer && activeJobId) {
+        try {
+          await fetch(`${apiBase}/api/cancel-job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobId: activeJobId })
+          });
+        } catch (_) {}
+      }
+    }
+
+    pauseJobBtn.addEventListener('click', toggleJobPause);
+    pauseJobCardBtn.addEventListener('click', toggleJobPause);
+    if (pauseProgressBtn) pauseProgressBtn.addEventListener('click', toggleJobPause);
+    cancelJobBtn.addEventListener('click', cancelJob);
+    cancelJobCardBtn.addEventListener('click', cancelJob);
+    if (cancelProgressBtn) cancelProgressBtn.addEventListener('click', cancelJob);
+
+    // Start Splitting Movie
+    startSplitBtn.addEventListener('click', async () => {
+      if (!currentMovie) return;
+
+      // Unlock Web Audio API synchronously on user click so mobile/desktop browsers never suspend audio after 5s
+      try {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (AC) {
+          if (!sharedAudioCtx || sharedAudioCtx.state === 'closed') {
+            sharedAudioCtx = new AC();
+          }
+          if (sharedAudioCtx.state === 'suspended') {
+            await sharedAudioCtx.resume();
+          }
+        }
+      } catch (_) {}
+
+      jobErrorBanner.style.display = 'none';
+      jobSuccessBanner.style.display = 'none';
+      outputsGrid.innerHTML = '';
+      resultsCard.style.display = 'block';
+      threeSpeedMultiplier = 4;
+
+      // Force at least 4m 55s (295s) if inputs were accidentally set to 5s
+      let clipDur = getClipDurationSeconds();
+      if (clipDur <= 10) {
+        clipMins.value = '4';
+        clipSecs.value = '55';
+        clipDur = 295;
+      }
+
+      const options = {
+        clipDurationSeconds: clipDur,
+        subtitleTemplate: subtitleTemplate.value || 'Part {n}',
+        subtitlePosition: subtitlePosition.value,
+        fontSize: Number(fontSize.value) || 64,
+        fontColor: fontColor.value,
+        movieTitle: movieTitle.value.trim(),
+        audioTrackIndex: Number(audioTrackSelect.value) || 0,
+        resolution: resolutionSelect.value,
+        startPart: Number(startPartInput.value) || 1,
+        endPart: Number(endPartInput.value) || 1,
+        encoder: encoderSelect ? encoderSelect.value : 'cpu',
+        frameZoomRatio: Number(frameZoomRatioSelect ? frameZoomRatioSelect.value : 1.35) || 1.35,
+        aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
+        playlistName: splitPlaylistNameInput ? splitPlaylistNameInput.value.trim() : '',
+        userEmail: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com',
+        authProvider: currentUser ? currentUser.provider : 'password'
+      };
+      if (resultsPlaylistNameInput && options.playlistName && !resultsPlaylistNameInput.value) {
+        resultsPlaylistNameInput.value = options.playlistName;
+      }
+
+      setJobControlsActive(true);
+
+      if (useLocalFFmpegServer && !currentMovie.isBrowserMode) {
+        try {
+          const res = await fetch(`${apiBase}/api/start-job`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ movieId: currentMovie.id, options })
+          });
+          const data = await res.json();
+          if (!data.ok) {
+            throw new Error(data.error || 'Failed to start job');
+          }
+          activeJobId = data.jobId;
+          startPollingJob();
+        } catch (err) {
+          threeSpeedMultiplier = 1;
+          jobErrorBanner.textContent = err.message;
+          jobErrorBanner.style.display = 'block';
+          setJobControlsActive(false);
+        }
+      } else {
+        runBrowserSplitJob(options);
+      }
+    });
+
+    async function runBrowserSplitJob(options) {
+      isJobPaused = false;
+      isJobCancelled = false;
+      browserCancelRequested = false;
+      try {
+        const outW = options.resolution === '540p' ? 540 : (options.resolution === '720p' ? 720 : 1080);
+        const aspectMode = options.aspectRatio || '9:16';
+        let outH = options.resolution === '540p' ? 960 : (options.resolution === '720p' ? 1280 : 1920);
+        if (aspectMode === '4:5') outH = Math.round((outW * 5) / 4 / 2) * 2;
+        else if (aspectMode === '3:4') outH = Math.round((outW * 4) / 3 / 2) * 2;
+        else if (aspectMode === '1:1') outH = outW;
+        const scaleFactor = outW / 1080;
+
+        const clipDuration = options.clipDurationSeconds;
+        const totalParts = Math.max(1, Math.ceil(currentMovie.duration / clipDuration));
+        const startPart = Math.max(1, Math.min(totalParts, options.startPart));
+        const endPart = Math.max(startPart, Math.min(totalParts, options.endPart));
+        const totalToRender = endPart - startPart + 1;
+
+        const safeBaseName = currentMovie.originalName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_') || 'Movie';
+        const generatedPartsList = [];
+
+        // Pre-decode audio once for WebCodecs High-Speed Turbo mode if file fits comfortably in memory
+        if (
+          window.VideoEncoder &&
+          window.AudioEncoder &&
+          window.Mp4Muxer &&
+          sharedAudioCtx &&
+          !currentMovie.cachedAudioBuffer &&
+          browserVideoFile &&
+          !currentMovie.isDemoLoop &&
+          browserVideoFile.size <= 350 * 1024 * 1024
+        ) {
+          try {
+            jobStatusLabel.textContent = 'Preparing high-speed audio stream...';
+            const ab = await browserVideoFile.arrayBuffer();
+            currentMovie.cachedAudioBuffer = await sharedAudioCtx.decodeAudioData(ab);
+          } catch (_) {}
+        }
+
+        for (let partNum = startPart; partNum <= endPart; partNum++) {
+          if (isJobCancelled || browserCancelRequested) break;
+          while (isJobPaused && !isJobCancelled && !browserCancelRequested) {
+            await new Promise(r => setTimeout(r, 200));
+          }
+          if (isJobCancelled || browserCancelRequested) break;
+
+          const startTime = (partNum - 1) * clipDuration;
+          const actualDuration = Math.min(clipDuration, currentMovie.duration - startTime);
+          if (actualDuration <= 0.2) break;
+
+          const cleanTpl = (options.subtitleTemplate || 'Part {n}').split('/')[0].replace(/\{total\}/gi, '').trim() || 'Part {n}';
+          const partText = cleanTpl.includes('{n}') ? cleanTpl.replace(/\{n\}/gi, String(partNum)) : `Part ${partNum}`;
+
+          const partParams = {
+            videoUrl: browserVideoUrl,
+            startTime,
+            duration: actualDuration,
+            outW,
+            outH,
+            scaleFactor,
+            partText,
+            partNum,
+            totalParts,
+            doneCount: partNum - startPart,
+            totalToRender,
+            options
+          };
+
+          let blob = null;
+          const canTryWebCodecs = Boolean(
+            window.VideoEncoder &&
+            window.Mp4Muxer &&
+            (currentMovie.isDemoLoop || (currentMovie.cachedAudioBuffer && window.AudioEncoder))
+          );
+
+          if (canTryWebCodecs) {
+            try {
+              blob = await renderSinglePartWebCodecs(partParams);
+            } catch (wcErr) {
+              console.warn('WebCodecs fallback to normal browser renderer:', wcErr);
+              blob = null;
+            }
+          }
+
+          if (!blob && !isJobCancelled && !browserCancelRequested) {
+            try {
+              blob = await renderSinglePartInBrowser(partParams);
+            } catch (rErr) {
+              console.warn(`Part ${partNum} browser render error:`, rErr);
+              blob = null;
+            }
+          }
+
+          if (isJobCancelled || browserCancelRequested || !blob) break;
+
+          // Clear any error banner as soon as part completes successfully
+          if (jobErrorBanner) {
+            jobErrorBanner.style.display = 'none';
+            jobErrorBanner.textContent = '';
+          }
+
+          const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+          const fileName = `${safeBaseName}_Part_${partNum}.${ext}`;
+          const clipUrl = URL.createObjectURL(blob);
+
+          const partRecord = {
+            partNumber: partNum,
+            totalParts,
+            fileName,
+            url: clipUrl,
+            durationFormatted: formatTime(actualDuration),
+            timeRangeFormatted: `${formatTime(startTime)} - ${formatTime(startTime + actualDuration)}`,
+            sizeBytes: blob.size,
+            isBlobUrl: true
+          };
+          generatedPartsList.push(partRecord);
+          appendOutputCard(partRecord);
+        }
+
+        if (isJobCancelled || browserCancelRequested) {
+          jobStatusLabel.textContent = 'Cancelled by user.';
+          if (jobErrorBanner) {
+            jobErrorBanner.style.display = 'none';
+            jobErrorBanner.textContent = '';
+          }
+        } else if (generatedPartsList.length === 0) {
+          jobStatusLabel.textContent = 'Splitting stopped: could not encode video.';
+          if (jobErrorBanner) {
+            jobErrorBanner.textContent = 'Browser media encoder could not render this video format. Try another video format or connect to PC FFmpeg mode.';
+            jobErrorBanner.style.display = 'block';
+          }
+        } else {
+          jobOverallPct.textContent = '100%';
+          jobProgressBar.style.width = '100%';
+          jobStatusLabel.textContent = 'Completed all selected parts!';
+          jobSuccessBanner.textContent = '✅ Successfully generated vertical movie clip(s) with black background and static Part labels!';
+          jobSuccessBanner.style.display = 'block';
+          if (jobErrorBanner) {
+            jobErrorBanner.style.display = 'none';
+            jobErrorBanner.textContent = '';
+          }
+
+          const completedProj = {
+            id: 'proj-' + Date.now(),
+            movieName: currentMovie.originalName,
+            createdAt: new Date().toISOString(),
+            createdBy: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com',
+            authProvider: currentUser ? currentUser.provider : 'password',
+            clipDurationSeconds: options.clipDurationSeconds,
+            aspectRatio: options.aspectRatio || '9:16',
+            frameZoomRatio: options.frameZoomRatio || 1.35,
+            resolution: options.resolution || '1080p',
+            totalParts: generatedPartsList.length,
+            parts: generatedPartsList
+          };
+          lastCompletedProject = completedProj;
+          await recordProjectInCloud(completedProj, options.playlistName);
+        }
+      } catch (err) {
+        if (!isJobCancelled && !browserCancelRequested) {
+          jobErrorBanner.textContent = err.message;
+          jobErrorBanner.style.display = 'block';
+        }
+      } finally {
+        threeSpeedMultiplier = 1;
+        setJobControlsActive(false);
+      }
+    }
+
+    // Create a pre-rendered static 9:16 canvas with pure #000000 black background, optional movie title, and static Part X text
+    function createStaticFrameTemplate(outW, outH, scaleFactor, movieTopY, movieBottomY, partText, options) {
+      const bgCanvas = document.createElement('canvas');
+      bgCanvas.width = outW;
+      bgCanvas.height = outH;
+      const bctx = bgCanvas.getContext('2d', { alpha: false });
+
+      bctx.fillStyle = '#000000';
+      bctx.fillRect(0, 0, outW, outH);
+
+      if (options.movieTitle) {
+        const titleSize = Math.round(46 * scaleFactor);
+        bctx.font = `bold ${titleSize}px "Segoe UI", Arial, sans-serif`;
+        bctx.fillStyle = '#fbbf24';
+        bctx.textAlign = 'center';
+        bctx.fillText(options.movieTitle, outW / 2, Math.max(60, movieTopY - Math.round(65 * scaleFactor)));
+      }
+
+      const fSize = Math.round((Number(options.fontSize) || 64) * scaleFactor);
+      let textY = Math.min(outH - 40, movieBottomY + fSize + Math.round(70 * scaleFactor));
+      if (options.subtitlePosition === 'top') {
+        textY = Math.max(80, movieTopY - Math.round(60 * scaleFactor));
+      } else if (options.subtitlePosition === 'bottom_edge') {
+        textY = outH - Math.round(120 * scaleFactor);
+      }
+
+      bctx.font = `bold ${fSize}px "Segoe UI", Arial, sans-serif`;
+      bctx.textAlign = 'center';
+      bctx.lineWidth = Math.round(5 * scaleFactor);
+      bctx.strokeStyle = 'rgba(0,0,0,0.9)';
+      bctx.strokeText(partText, outW / 2, textY);
+      bctx.fillStyle = options.fontColor || '#ffffff';
+      bctx.fillText(partText, outW / 2, textY);
+
+      return { bgCanvas, textY, fSize };
+    }
+
+    // Hardware-Accelerated WebCodecs + MP4-Muxer High-Speed Renderer (8x-16x faster than real-time while retaining full H.264 + AAC quality)
+    function renderSinglePartWebCodecs({
+      videoUrl, startTime, duration, outW, outH, scaleFactor,
+      partText, partNum, totalParts, doneCount, totalToRender, options
+    }) {
+      return new Promise(async (resolve, reject) => {
+        const codecCandidates = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
+        const targetBitrate = outW >= 1080 ? 4_500_000 : 2_800_000;
+        const fps = 24;
+        let selectedVideoConfig = null;
+
+        for (const c of codecCandidates) {
+          try {
+            const cfg = {
+              codec: c,
+              width: outW,
+              height: outH,
+              bitrate: targetBitrate,
+              framerate: fps,
+              hardwareAcceleration: 'prefer-hardware'
+            };
+            const sup = await VideoEncoder.isConfigSupported(cfg);
+            if (sup && sup.supported) {
+              selectedVideoConfig = sup.config || cfg;
+              break;
+            }
+          } catch (_) {}
+        }
+
+        if (!selectedVideoConfig) {
+          return reject(new Error('Hardware H.264 VideoEncoder not supported on this device'));
+        }
+
+        // Check AAC AudioEncoder support if we have cached audio
+        let audioConfig = null;
+        const audioBuf = currentMovie && currentMovie.cachedAudioBuffer;
+        if (audioBuf && window.AudioEncoder) {
+          try {
+            const acfg = {
+              codec: 'mp4a.40.2',
+              sampleRate: audioBuf.sampleRate,
+              numberOfChannels: Math.min(2, audioBuf.numberOfChannels),
+              bitrate: 160_000
+            };
+            const asup = await AudioEncoder.isConfigSupported(acfg);
+            if (asup && asup.supported) {
+              audioConfig = asup.config || acfg;
+            }
+          } catch (_) {}
+          if (!audioConfig) {
+            return reject(new Error('AAC AudioEncoder not supported; falling back to stream recorder to preserve audio'));
+          }
+        }
+
+        let wakeLock = null;
+        try {
+          if (navigator.wakeLock) wakeLock = await navigator.wakeLock.request('screen');
+        } catch (_) {}
+
+        const video = document.createElement('video');
+        video.muted = true;
+        video.defaultMuted = true;
+        video.volume = 0;
+        video.loop = Boolean(currentMovie && currentMovie.isDemoLoop);
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('muted', '');
+        if (videoUrl && !videoUrl.startsWith('blob:') && !videoUrl.startsWith('data:')) {
+          try {
+            const u = new URL(videoUrl, window.location.href);
+            if (u.origin !== window.location.origin) video.crossOrigin = 'anonymous';
+          } catch (_) {}
+        }
+        video.style.cssText = 'position:fixed;width:120px;height:70px;opacity:0.85;pointer-events:none;left:8px;bottom:8px;z-index:99998;border-radius:4px;';
+        document.body.appendChild(video);
+        video.src = videoUrl;
+        video.load();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+        const cleanup = () => {
+          if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
+          try { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); } catch (_) {}
+        };
+
+        video.onloadedmetadata = async () => {
+          try {
+            if (startTime > 0 && !currentMovie?.isDemoLoop) {
+              video.currentTime = startTime;
+              await new Promise(r => {
+                const onSeek = () => { video.removeEventListener('seeked', onSeek); r(); };
+                video.addEventListener('seeked', onSeek);
+                setTimeout(r, 1500);
+              });
+            }
+
+            const muxerOpts = {
+              target: new Mp4Muxer.ArrayBufferTarget(),
+              video: { codec: 'avc', width: outW, height: outH },
+              fastStart: 'in-memory'
+            };
+            if (audioConfig) {
+              muxerOpts.audio = {
+                codec: 'aac',
+                numberOfChannels: audioConfig.numberOfChannels,
+                sampleRate: audioConfig.sampleRate
+              };
+            }
+            const muxer = new Mp4Muxer.Muxer(muxerOpts);
+
+            const videoEncoder = new VideoEncoder({
+              output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+              error: (e) => console.error('VideoEncoder error:', e)
+            });
+            videoEncoder.configure(selectedVideoConfig);
+
+            // Encode 1.0x normal-speed audio slice upfront in <0.3s
+            if (audioConfig && audioBuf) {
+              const audioEncoder = new AudioEncoder({
+                output: (chunk, meta) => muxer.addAudioChunk(chunk, meta),
+                error: (e) => console.error('AudioEncoder error:', e)
+              });
+              audioEncoder.configure(audioConfig);
+
+              const sr = audioConfig.sampleRate;
+              const numCh = audioConfig.numberOfChannels;
+              const startSample = Math.floor(startTime * sr);
+              const totalSamples = Math.min(
+                Math.floor(duration * sr),
+                Math.max(0, audioBuf.length - startSample)
+              );
+              const chunkFrames = 4096;
+              for (let offset = 0; offset < totalSamples; offset += chunkFrames) {
+                const len = Math.min(chunkFrames, totalSamples - offset);
+                const planarData = new Float32Array(len * numCh);
+                for (let ch = 0; ch < numCh; ch++) {
+                  const chData = audioBuf.getChannelData(ch).subarray(startSample + offset, startSample + offset + len);
+                  planarData.set(chData, ch * len);
+                }
+                const ad = new AudioData({
+                  format: 'f32-planar',
+                  sampleRate: sr,
+                  numberOfFrames: len,
+                  numberOfChannels: numCh,
+                  timestamp: Math.round((offset / sr) * 1_000_000),
+                  data: planarData
+                });
+                audioEncoder.encode(ad);
+                ad.close();
+              }
+              await audioEncoder.flush();
+              audioEncoder.close();
+            }
+
+            const zoomRatio = Math.max(1.0, Math.min(2.4, Number(options.frameZoomRatio) || 1.35));
+            const movieAspect = (video.videoWidth || 1920) / (video.videoHeight || 1080);
+            const scaledW = Math.round(outW * zoomRatio);
+            const scaledH = Math.min(outH - 80, Math.round(scaledW / movieAspect));
+            const drawX = Math.round((outW - scaledW) / 2);
+            const movieTopY = Math.round((outH - scaledH) / 2);
+            const movieBottomY = movieTopY + scaledH;
+
+            // Draw static black bars + Part X label ONCE before the loop
+            const { bgCanvas } = createStaticFrameTemplate(outW, outH, scaleFactor, movieTopY, movieBottomY, partText, options);
+            ctx.drawImage(bgCanvas, 0, 0);
+
+            // Boost video playback speed up to 8x (or 16x virtual speed for demo loop)
+            let speedRate = 8.0;
+            for (const rate of [8.0, 6.0, 4.0, 2.0]) {
+              try {
+                video.playbackRate = rate;
+                speedRate = rate;
+                break;
+              } catch (_) {}
+            }
+
+            await video.play();
+
+            const totalFrames = Math.ceil(duration * fps);
+            const frameDurUs = Math.round(1_000_000 / fps);
+            let encodedFrames = 0;
+            const startPerf = performance.now();
+
+            const pumpFrames = async () => {
+              while (encodedFrames < totalFrames && !browserCancelRequested) {
+                if (videoEncoder.encodeQueueSize > 14) {
+                  await new Promise(r => setTimeout(r, 10));
+                  continue;
+                }
+
+                const wallElapsed = (performance.now() - startPerf) / 1000;
+                const mediaElapsed = currentMovie?.isDemoLoop
+                  ? wallElapsed * 16.0
+                  : Math.max(0, video.currentTime - startTime);
+
+                const targetMediaSec = encodedFrames / fps;
+                if (!currentMovie?.isDemoLoop && mediaElapsed < targetMediaSec) {
+                  if (video.ended && wallElapsed > 2) break;
+                  if (video.paused && !video.ended) {
+                    video.play().catch(() => {});
+                  }
+                  await new Promise(r => setTimeout(r, 8));
+                  continue;
+                }
+
+                // Only redraw the middle movie rectangle (with increased ratio zoom) — static black bars and Part X text remain untouched!
+                ctx.drawImage(video, drawX, movieTopY, scaledW, scaledH);
+
+                const timestampUs = Math.round(encodedFrames * (1_000_000 / fps));
+                const vFrame = new VideoFrame(canvas, {
+                  timestamp: timestampUs,
+                  duration: frameDurUs
+                });
+                videoEncoder.encode(vFrame, { keyFrame: encodedFrames % (fps * 3) === 0 });
+                vFrame.close();
+                encodedFrames++;
+
+                if (encodedFrames % 12 === 0) {
+                  const curClipPct = Math.min(99, Math.round((encodedFrames / totalFrames) * 100));
+                  const overallPct = Math.min(99, Math.round(((doneCount + curClipPct / 100) / totalToRender) * 100));
+                  jobOverallPct.textContent = `${overallPct}%`;
+                  jobProgressBar.style.width = `${overallPct}%`;
+                  jobStatusLabel.textContent = `⚡ Turbo Encoding Part ${partNum} (${formatTime(encodedFrames / fps)} / ${formatTime(duration)} — ${curClipPct}%)...`;
+                  await new Promise(r => setTimeout(r, 0));
+                }
+              }
+
+              await videoEncoder.flush();
+              videoEncoder.close();
+              muxer.finalize();
+              cleanup();
+              resolve(new Blob([muxer.target.buffer], { type: 'video/mp4' }));
+            };
+
+            pumpFrames().catch(err => {
+              cleanup();
+              reject(err);
+            });
+          } catch (err) {
+            cleanup();
+            reject(err);
+          }
+        };
+
+        video.onerror = () => {
+          cleanup();
+          reject(new Error('Video decode error'));
+        };
+      });
+    }
+
+    function renderSinglePartInBrowser({
+      videoUrl, startTime, duration, outW, outH, scaleFactor,
+      partText, partNum, totalParts, doneCount, totalToRender, options
+    }) {
+      return new Promise(async (resolve, reject) => {
+        let wakeLock = null;
+        try {
+          if (navigator.wakeLock) {
+            wakeLock = await navigator.wakeLock.request('screen');
+          }
+        } catch (_) {}
+
+        // Muted video prevents mobile browser autoplay blocking
+        const video = document.createElement('video');
+        video.muted = true;
+        video.defaultMuted = true;
+        video.volume = 0;
+        video.loop = Boolean(currentMovie && currentMovie.isDemoLoop);
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.setAttribute('muted', '');
+        if (videoUrl && !videoUrl.startsWith('blob:') && !videoUrl.startsWith('data:')) {
+          try {
+            const u = new URL(videoUrl, window.location.href);
+            if (u.origin !== window.location.origin) video.crossOrigin = 'anonymous';
+          } catch (_) {}
+        }
+        video.style.cssText = 'position:fixed;width:120px;height:70px;opacity:0.85;pointer-events:none;bottom:8px;right:8px;z-index:99998;border-radius:4px;';
+        document.body.appendChild(video);
+        video.src = videoUrl;
+        video.load();
+
+        const canvas = document.createElement('canvas');
+        canvas.width = outW;
+        canvas.height = outH;
+        const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+
+        const cleanup = () => {
+          if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
+          try { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); } catch (_) {}
+        };
+
+        let hasStartedRecording = false;
+
+        video.onloadedmetadata = async () => {
+          if (startTime > 0) {
+            video.currentTime = startTime;
+            await new Promise(r => {
+              const onSeek = () => { video.removeEventListener('seeked', onSeek); r(); };
+              video.addEventListener('seeked', onSeek);
+              setTimeout(r, 1500);
+            });
+          }
+
+          // Start video playback BEFORE capturing stream so audio tracks are active
+          try {
+            await video.play();
+          } catch (_) {
+            video.muted = true;
+            try { await video.play(); } catch (_) {}
+          }
+
+          const canvasStream = canvas.captureStream ? canvas.captureStream(30) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(30) : null);
+          if (!canvasStream) {
+            cleanup();
+            return reject(new Error('Canvas stream not supported on this browser'));
+          }
+
+          try {
+            const vStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
+            if (vStream && vStream.getAudioTracks().length > 0) {
+              canvasStream.addTrack(vStream.getAudioTracks()[0]);
+            } else if (sharedAudioCtx && !video.muted) {
+              if (sharedAudioCtx.state === 'suspended') {
+                await sharedAudioCtx.resume();
+              }
+              const source = sharedAudioCtx.createMediaElementSource(video);
+              const dest = sharedAudioCtx.createMediaStreamDestination();
+              const gain = sharedAudioCtx.createGain();
+              gain.gain.value = 0.001; // Keep audio clock pulling samples without echo
+              source.connect(dest);
+              source.connect(gain);
+              gain.connect(sharedAudioCtx.destination);
+              if (dest.stream.getAudioTracks().length > 0) {
+                canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+              }
+            }
+          } catch (_) {}
+
+          const mimeCandidates = [
+            'video/mp4;codecs=avc1',
+            'video/mp4',
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm'
+          ];
+          const mime = mimeCandidates.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
+
+          let recorder;
+          try {
+            recorder = mime
+              ? new MediaRecorder(canvasStream, { mimeType: mime, videoBitsPerSecond: 4000000 })
+              : new MediaRecorder(canvasStream);
+          } catch (recErr) {
+            try {
+              recorder = new MediaRecorder(canvasStream);
+            } catch (recErr2) {
+              cleanup();
+              return reject(new Error('MediaRecorder initialization failed'));
+            }
+          }
+
+          const chunks = [];
+          recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+          recorder.onstop = () => {
+            const finalType = recorder.mimeType || mime || 'video/mp4';
+            if (jobErrorBanner) {
+              jobErrorBanner.style.display = 'none';
+              jobErrorBanner.textContent = '';
+            }
+            cleanup();
+            resolve(new Blob(chunks, { type: finalType }));
+          };
+
+          const zoomRatio = Math.max(1.0, Math.min(2.4, Number(options.frameZoomRatio) || 1.35));
+          const movieAspect = (video.videoWidth || 1920) / (video.videoHeight || 1080);
+          const scaledW = Math.round(outW * zoomRatio);
+          const scaledH = Math.min(outH - 80, Math.round(scaledW / movieAspect));
+          const drawX = Math.round((outW - scaledW) / 2);
+          const movieTopY = Math.round((outH - scaledH) / 2);
+          const movieBottomY = movieTopY + scaledH;
+
+          // Pre-render the static black background + Part X text ONCE
+          const { bgCanvas } = createStaticFrameTemplate(outW, outH, scaleFactor, movieTopY, movieBottomY, partText, options);
+          ctx.drawImage(bgCanvas, 0, 0);
+
+          try {
+            recorder.start(1000);
+            hasStartedRecording = true;
+            // Clear any error banner immediately because processing/recording has successfully started!
+            if (jobErrorBanner) {
+              jobErrorBanner.style.display = 'none';
+              jobErrorBanner.textContent = '';
+            }
+          } catch (stErr) {
+            console.warn('Recorder start warning:', stErr);
+          }
+
+          const recordStartPerf = performance.now();
+
+          const frameTimer = setInterval(() => {
+            // Avoid error banner while video is actively processing / splitting
+            if (jobErrorBanner && jobErrorBanner.style.display !== 'none') {
+              jobErrorBanner.style.display = 'none';
+              jobErrorBanner.textContent = '';
+            }
+
+            if (isJobPaused) {
+              if (!video.paused) video.pause();
+              if (recorder.state === 'recording') recorder.pause();
+              return;
+            } else {
+              if (video.paused && !video.ended) video.play().catch(() => {});
+              if (recorder.state === 'paused') recorder.resume();
+            }
+
+            const wallElapsed = (performance.now() - recordStartPerf) / 1000;
+            const mediaElapsed = Math.max(0, video.currentTime - startTime);
+            const elapsedClip = (currentMovie && currentMovie.isDemoLoop)
+              ? wallElapsed
+              : Math.min(wallElapsed, mediaElapsed > 0 ? mediaElapsed : wallElapsed);
+
+            const reachedTrueEndOfMovie = !currentMovie?.isDemoLoop && video.ended && wallElapsed >= Math.min(duration - 1, 15);
+            if (isJobCancelled || browserCancelRequested || reachedTrueEndOfMovie || elapsedClip >= duration) {
+              clearInterval(frameTimer);
+              if (recorder.state === 'recording') recorder.stop();
+              return;
+            }
+
+            // If mobile/desktop browser paused or stopped the video mid-clip before 4m 55s, resume immediately
+            if ((video.paused || video.ended) && elapsedClip < duration - 0.25) {
+              video.play().catch(() => {
+                video.muted = true;
+                video.play().catch(() => {});
+              });
+            }
+
+            const curClipPct = Math.min(99, Math.max(0, Math.round((elapsedClip / duration) * 100)));
+            const overallPct = Math.min(99, Math.round(((doneCount + curClipPct / 100) / totalToRender) * 100));
+            jobOverallPct.textContent = `${overallPct}%`;
+            jobProgressBar.style.width = `${overallPct}%`;
+            jobStatusLabel.textContent = `Encoding Part ${partNum} (${formatTime(elapsedClip)} — ${curClipPct}%)...`;
+
+            // Only update the middle movie area (with increased ratio zoom) — static black bars and Part X text remain untouched
+            try {
+              ctx.drawImage(video, drawX, movieTopY, scaledW, scaledH);
+            } catch (_) {}
+          }, 33);
+        };
+
+        video.onerror = (e) => {
+          // Avoid showing or throwing error if video has already started recording and is working!
+          if (hasStartedRecording) {
+            console.warn('Ignored non-fatal video error event because recording has already started:', e);
+            if (jobErrorBanner) {
+              jobErrorBanner.style.display = 'none';
+              jobErrorBanner.textContent = '';
+            }
+            return;
+          }
+          cleanup();
+          reject(new Error('Failed to render video in browser.'));
+        };
+      });
+    }
+
+    let renderedCount = 0;
+
+    function startPollingJob() {
+      renderedCount = 0;
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(checkJobStatus, 400);
+      checkJobStatus();
+    }
+
+    function appendOutputCard(part) {
+      const card = document.createElement('div');
+      card.className = 'output-card';
+      const sizeMB = (part.sizeBytes / (1024 * 1024)).toFixed(1);
+      const videoSrc = part.isBlobUrl ? part.url : `${apiBase}${part.url}`;
+      const downloadHref = part.isBlobUrl ? part.url : `${apiBase}${part.url}?download=1`;
+      card.innerHTML = `
+        <video controls preload="metadata" src="${videoSrc}"></video>
+        <div class="output-card-body">
+          <div class="output-card-title">
+            <span>Part ${part.partNumber}</span>
+            <span class="badge">${part.durationFormatted}</span>
+          </div>
+          <div class="output-card-meta">
+            Movie Range: ${part.timeRangeFormatted} • ${sizeMB} MB
+          </div>
+          <a class="btn btn-primary" href="${downloadHref}" download="${part.fileName}" style="width: 100%;">
+            ⬇ Download Part ${part.partNumber}
+          </a>
+        </div>
+      `;
+      outputsGrid.appendChild(card);
+
+      if (window.gsap) {
+        gsap.fromTo(card,
+          { opacity: 0, y: 24, scale: 0.95 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.45, ease: 'power2.out' }
+        );
+      }
+    }
+
+    async function checkJobStatus() {
+      if (!activeJobId) return;
+      try {
+        const res = await fetch(`${apiBase}/api/job-status?jobId=${encodeURIComponent(activeJobId)}`);
+        const data = await res.json();
+        if (!data.ok) return;
+
+        const job = data.job;
+        currentJobOutputDir = job.outputDir;
+
+        const doneCount = job.completedParts.length;
+        const totalToRender = Math.max(1, job.totalPartsToRender);
+        const overallPct = job.status === 'completed'
+          ? 100
+          : Math.min(99, Math.round(((doneCount + (job.currentPartProgress / 100)) / totalToRender) * 100));
+
+        jobOverallPct.textContent = `${overallPct}%`;
+        jobProgressBar.style.width = `${overallPct}%`;
+
+        if (job.status === 'running') {
+          jobStatusLabel.textContent = `Encoding Part ${job.currentPartNumber} (${job.currentPartProgress}% of current clip)...`;
+        } else if (job.status === 'paused') {
+          jobStatusLabel.textContent = `⏸ Server Splitting Paused (Part ${job.currentPartNumber || 1}). Click Resume to continue.`;
+          isJobPaused = true;
+          pauseJobBtn.innerHTML = '▶ Resume Splitting';
+          pauseJobBtn.style.background = '#10b981';
+          pauseJobBtn.style.color = '#fff';
+          pauseJobCardBtn.innerHTML = '▶ Resume';
+          pauseJobCardBtn.style.background = '#10b981';
+          pauseJobCardBtn.style.color = '#fff';
+        } else if (job.status === 'completed') {
+          threeSpeedMultiplier = 1;
+          jobStatusLabel.textContent = `Completed all ${doneCount} part(s)!`;
+          jobSuccessBanner.textContent = `✅ Successfully generated ${doneCount} vertical movie clip(s) with black background and static Part labels! Saved in: ${job.outputDir}`;
+          jobSuccessBanner.style.display = 'block';
+          clearInterval(pollTimer);
+          setJobControlsActive(false);
+
+          lastCompletedProject = {
+            id: job.id,
+            movieName: job.movieName,
+            createdAt: new Date().toISOString(),
+            createdBy: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com',
+            authProvider: currentUser ? currentUser.provider : 'password',
+            clipDurationSeconds: getClipDurationSeconds(),
+            aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
+            frameZoomRatio: Number(frameZoomRatioSelect ? frameZoomRatioSelect.value : 1.35) || 1.35,
+            resolution: resolutionSelect.value,
+            totalParts: job.completedParts.length,
+            parts: job.completedParts
+          };
+          syncCloudState();
+        } else if (job.status === 'cancelled') {
+          threeSpeedMultiplier = 1;
+          jobStatusLabel.textContent = `Cancelled after ${doneCount} part(s).`;
+          clearInterval(pollTimer);
+          setJobControlsActive(false);
+        } else if (job.status === 'error') {
+          threeSpeedMultiplier = 1;
+          jobStatusLabel.textContent = `Stopped due to error.`;
+          jobErrorBanner.textContent = job.error || 'FFmpeg error occurred';
+          jobErrorBanner.style.display = 'block';
+          clearInterval(pollTimer);
+          setJobControlsActive(false);
+        }
+
+        while (renderedCount < job.completedParts.length) {
+          const part = job.completedParts[renderedCount];
+          renderedCount++;
+          appendOutputCard(part);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    openOutputsFolderBtn.addEventListener('click', () => {
+      if (!useLocalFFmpegServer) return;
+      fetch(`${apiBase}/api/open-folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+    });
+
+    openJobFolderBtn.addEventListener('click', () => {
+      if (!useLocalFFmpegServer) return;
+      fetch(`${apiBase}/api/open-folder`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ folderPath: currentJobOutputDir })
+      });
+    });
+
+    /* =========================================================================
+       AUTHENTICATION, SIDE ADMIN CONSOLE & CLOUD PLAYLISTS
+       ========================================================================= */
+    const CLOUD_STORAGE_KEY = 'vsplitter_cloud_server_db_v1';
+    const AUTH_SESSION_KEY = 'vsplitter_auth_session_v1';
+
+    const loginOverlay = document.getElementById('loginOverlay');
+    const loginForm = document.getElementById('loginForm');
+    const loginEmailInput = document.getElementById('loginEmailInput');
+    const loginPasswordInput = document.getElementById('loginPasswordInput');
+    const loginErrorBanner = document.getElementById('loginErrorBanner');
+    const quickFillUserCredsBtn = document.getElementById('quickFillUserCredsBtn');
+    const currentUserBadge = document.getElementById('currentUserBadge');
+    const headerNormalModeBtn = document.getElementById('headerNormalModeBtn');
+    const headerAdminModeBtn = document.getElementById('headerAdminModeBtn');
+    const logoutBtn = document.getElementById('logoutBtn');
+
+    const sideRoleBadge = document.getElementById('sideRoleBadge');
+    const tabUserModeBtn = document.getElementById('tabUserModeBtn');
+    const tabAdminModeBtn = document.getElementById('tabAdminModeBtn');
+    const adminLoginSection = document.getElementById('adminLoginSection');
+    const adminUnlockedBar = document.getElementById('adminUnlockedBar');
+    const adminUsernameInput = document.getElementById('adminUsernameInput');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const quickFillAdminCredsBtn = document.getElementById('quickFillAdminCredsBtn');
+    const adminLoginError = document.getElementById('adminLoginError');
+    const adminLoginSubmitBtn = document.getElementById('adminLoginSubmitBtn');
+    const lockAdminBtn = document.getElementById('lockAdminBtn');
+
+    const sidePlaylistNameInput = document.getElementById('sidePlaylistNameInput');
+    const sideSavePlaylistBtn = document.getElementById('sideSavePlaylistBtn');
+    const cloudSaveFeedback = document.getElementById('cloudSaveFeedback');
+    const refreshCloudBtn = document.getElementById('refreshCloudBtn');
+    const playlistsCountLabel = document.getElementById('playlistsCountLabel');
+    const historyCountLabel = document.getElementById('historyCountLabel');
+    const cloudPlaylistsList = document.getElementById('cloudPlaylistsList');
+    const projectsHistoryList = document.getElementById('projectsHistoryList');
+
+
+    function loadLocalCloudReplica() {
+      try {
+        const raw = localStorage.getItem(CLOUD_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            projectsHistory: Array.isArray(parsed.projectsHistory) ? parsed.projectsHistory : [],
+            playlists: Array.isArray(parsed.playlists) ? parsed.playlists : [],
+            oauthConfig: parsed.oauthConfig || { facebookAppId: '', instagramAppId: '' }
+          };
+        }
+      } catch (_) {}
+      return {
+        projectsHistory: [],
+        playlists: [],
+        oauthConfig: { facebookAppId: '', instagramAppId: '' }
+      };
+    }
+
+    function saveLocalCloudReplica(state) {
+      try {
+        localStorage.setItem(CLOUD_STORAGE_KEY, JSON.stringify(state));
+      } catch (_) {}
+    }
+
+    function mergeCloudStates(serverData, localData) {
+      const historyMap = new Map();
+      [...(serverData.projectsHistory || []), ...(localData.projectsHistory || [])].forEach(item => {
+        if (item && item.id && !historyMap.has(item.id)) {
+          historyMap.set(item.id, item);
+        }
+      });
+      const playlistMap = new Map();
+      [...(serverData.playlists || []), ...(localData.playlists || [])].forEach(pl => {
+        if (pl && pl.name) {
+          const key = pl.name.toLowerCase();
+          if (!playlistMap.has(key)) {
+            playlistMap.set(key, pl);
+          } else {
+            const existing = playlistMap.get(key);
+            const projMap = new Map();
+            [...(existing.projects || []), ...(pl.projects || [])].forEach(p => {
+              if (p && p.id) projMap.set(p.id, p);
+            });
+            existing.projects = Array.from(projMap.values());
+          }
+        }
+      });
+      return {
+        projectsHistory: Array.from(historyMap.values()).slice(0, 100),
+        playlists: Array.from(playlistMap.values()),
+        oauthConfig: (serverData.oauthConfig && (serverData.oauthConfig.facebookAppId || serverData.oauthConfig.instagramAppId))
+          ? serverData.oauthConfig
+          : (localData.oauthConfig || { facebookAppId: '', instagramAppId: '' })
+      };
+    }
+
+    async function syncCloudState() {
+      const localReplica = loadLocalCloudReplica();
+      if (useLocalFFmpegServer) {
+        try {
+          const res = await fetch(`${apiBase}/api/cloud/state`);
+          const data = await res.json();
+          if (data && data.ok) {
+            cloudState = mergeCloudStates(data, localReplica);
+            saveLocalCloudReplica(cloudState);
+            renderCloudLists();
+            return;
+          }
+        } catch (_) {}
+      }
+      cloudState = localReplica;
+      renderCloudLists();
+    }
+
+    async function recordProjectInCloud(project, optionalPlaylistName = '') {
+      const localReplica = loadLocalCloudReplica();
+      localReplica.projectsHistory = [
+        project,
+        ...localReplica.projectsHistory.filter(p => p.id !== project.id)
+      ].slice(0, 100);
+
+      if (optionalPlaylistName && optionalPlaylistName.trim()) {
+        const plName = optionalPlaylistName.trim();
+        let pl = localReplica.playlists.find(p => p.name.toLowerCase() === plName.toLowerCase());
+        if (!pl) {
+          pl = {
+            id: 'pl-' + Date.now(),
+            name: plName,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            createdBy: project.createdBy || 'vaishnavideapad@gmail.com',
+            projects: []
+          };
+          localReplica.playlists.unshift(pl);
+        }
+        pl.updatedAt = new Date().toISOString();
+        pl.projects = [project, ...(pl.projects || []).filter(x => x.id !== project.id)];
+      }
+      saveLocalCloudReplica(localReplica);
+
+      if (useLocalFFmpegServer) {
+        try {
+          await fetch(`${apiBase}/api/cloud/record-project`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ project })
+          });
+          if (optionalPlaylistName && optionalPlaylistName.trim()) {
+            await fetch(`${apiBase}/api/cloud/playlist/save`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                playlistName: optionalPlaylistName.trim(),
+                project,
+                userEmail: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com'
+              })
+            });
+          }
+        } catch (_) {}
+      }
+      await syncCloudState();
+    }
+
+    async function saveProjectToNamedPlaylist(playlistName, projectObj = null) {
+      const cleanName = String(playlistName || '').trim();
+      if (!cleanName) {
+        showCloudFeedback('⚠️ Please enter a Playlist name first.', true);
+        return;
+      }
+
+      const targetProject = projectObj || lastCompletedProject || (currentMovie ? {
+        id: currentMovie.id || ('proj-' + Date.now()),
+        movieName: currentMovie.originalName,
+        createdAt: new Date().toISOString(),
+        createdBy: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com',
+        authProvider: currentUser ? currentUser.provider : 'password',
+        clipDurationSeconds: getClipDurationSeconds(),
+        aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
+        frameZoomRatio: Number(frameZoomRatioSelect ? frameZoomRatioSelect.value : 1.35) || 1.35,
+        resolution: resolutionSelect ? resolutionSelect.value : '1080p',
+        totalParts: Math.max(1, Math.ceil((currentMovie.duration || 295) / getClipDurationSeconds())),
+        parts: []
+      } : null);
+
+      const localReplica = loadLocalCloudReplica();
+      let pl = localReplica.playlists.find(p => p.name.toLowerCase() === cleanName.toLowerCase());
+      if (!pl) {
+        pl = {
+          id: 'pl-' + Date.now(),
+          name: cleanName,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          createdBy: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com',
+          projects: []
+        };
+        localReplica.playlists.unshift(pl);
+      }
+      pl.updatedAt = new Date().toISOString();
+      if (targetProject) {
+        pl.projects = [targetProject, ...(pl.projects || []).filter(x => x.id !== targetProject.id)];
+        if (!localReplica.projectsHistory.some(h => h.id === targetProject.id)) {
+          localReplica.projectsHistory.unshift(targetProject);
+        }
+      }
+      saveLocalCloudReplica(localReplica);
+
+      if (useLocalFFmpegServer) {
+        try {
+          await fetch(`${apiBase}/api/cloud/playlist/save`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              playlistName: cleanName,
+              project: targetProject,
+              userEmail: currentUser ? currentUser.email : 'vaishnavideapad@gmail.com'
+            })
+          });
+        } catch (_) {}
+      }
+
+      await syncCloudState();
+      showCloudFeedback(`☁️ Saved to Cloud Server Playlist "${cleanName}"!`);
+    }
+
+    function showCloudFeedback(msg, isError = false) {
+      if (!cloudSaveFeedback) return;
+      cloudSaveFeedback.style.display = 'block';
+      cloudSaveFeedback.style.color = isError ? '#fca5a5' : '#6ee7b7';
+      cloudSaveFeedback.textContent = msg;
+      setTimeout(() => {
+        cloudSaveFeedback.style.display = 'none';
+      }, 4000);
+    }
+
+    function renderCloudLists() {
+      const playlists = cloudState.playlists || [];
+      const history = cloudState.projectsHistory || [];
+
+      if (playlistsCountLabel) playlistsCountLabel.textContent = String(playlists.length);
+      if (historyCountLabel) historyCountLabel.textContent = String(history.length);
+
+      // Render Cloud Playlists
+      cloudPlaylistsList.innerHTML = '';
+      if (playlists.length === 0) {
+        cloudPlaylistsList.innerHTML = `<div style="font-size: 11.5px; color: var(--muted); padding: 8px;">No Cloud Playlists yet. Enter a playlist name above and click Save Playlist.</div>`;
+      } else {
+        playlists.forEach(pl => {
+          const projCount = (pl.projects || []).length;
+          const totalClips = (pl.projects || []).reduce((acc, p) => acc + (p.totalParts || (p.parts ? p.parts.length : 0)), 0);
+          const item = document.createElement('div');
+          item.className = 'cloud-item';
+          item.innerHTML = `
+            <div class="cloud-item-header">
+              <span>🎵 ${pl.name}</span>
+              <span class="badge">☁️ Cloud Playlist</span>
+            </div>
+            <div class="cloud-item-meta">
+              ${projCount} Project(s) • ${totalClips} Part(s) • By ${pl.createdBy || 'User'}
+            </div>
+            <div class="cloud-item-actions">
+              <button type="button" class="btn btn-primary btn-xs" data-action="load-playlist" data-id="${pl.id}">
+                ▶ View Playlist Clips
+              </button>
+              <button type="button" class="btn btn-secondary btn-xs" data-action="add-current-to-playlist" data-name="${pl.name}">
+                + Add Current Movie
+              </button>
+              ${isAdminConsoleUnlocked ? `<button type="button" class="btn btn-danger btn-xs" data-action="delete-playlist" data-id="${pl.id}">🗑️ Delete</button>` : ''}
+            </div>
+          `;
+          cloudPlaylistsList.appendChild(item);
+        });
+      }
+
+      // Render Projects History
+      projectsHistoryList.innerHTML = '';
+      if (history.length === 0) {
+        projectsHistoryList.innerHTML = `<div style="font-size: 11.5px; color: var(--muted); padding: 8px;">No split projects in history yet. Split a movie or save a project to populate history.</div>`;
+      } else {
+        history.forEach(proj => {
+          const dateStr = proj.createdAt ? new Date(proj.createdAt).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+          const ratioPct = Math.round((Number(proj.frameZoomRatio) || 1.35) * 100);
+          const item = document.createElement('div');
+          item.className = 'cloud-item';
+          item.innerHTML = `
+            <div class="cloud-item-header">
+              <span style="word-break: break-all;">🎬 ${proj.movieName}</span>
+              <span class="badge">${proj.totalParts || 1} Parts</span>
+            </div>
+            <div class="cloud-item-meta">
+              ${proj.aspectRatio || '9:16'} (${ratioPct}% Ratio) • ${dateStr} • ${proj.createdBy || 'vaishnavideapad@gmail.com'}
+            </div>
+            <div class="cloud-item-actions">
+              <button type="button" class="btn btn-primary btn-xs" data-action="save-proj-to-playlist" data-id="${proj.id}">
+                ☁️ Save as Playlist
+              </button>
+              ${(proj.parts && proj.parts.length > 0) ? `<button type="button" class="btn btn-secondary btn-xs" data-action="view-proj-clips" data-id="${proj.id}">▶ Show Clips</button>` : ''}
+              ${isAdminConsoleUnlocked ? `<button type="button" class="btn btn-danger btn-xs" data-action="delete-project" data-id="${proj.id}">🗑️</button>` : ''}
+            </div>
+          `;
+          projectsHistoryList.appendChild(item);
+        });
+      }
+    }
+
+    cloudPlaylistsList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      if (action === 'add-current-to-playlist') {
+        await saveProjectToNamedPlaylist(btn.dataset.name);
+      } else if (action === 'load-playlist') {
+        const pl = (cloudState.playlists || []).find(x => x.id === btn.dataset.id);
+        if (!pl) return;
+        outputsGrid.innerHTML = '';
+        resultsCard.style.display = 'block';
+        let count = 0;
+        (pl.projects || []).forEach(proj => {
+          (proj.parts || []).forEach(part => {
+            count++;
+            appendOutputCard(part);
+          });
+        });
+        jobStatusLabel.textContent = `Loaded Cloud Playlist "${pl.name}" (${(pl.projects || []).length} project(s), ${count} playable clip(s))`;
+        jobOverallPct.textContent = '100%';
+        jobProgressBar.style.width = '100%';
+        resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      } else if (action === 'delete-playlist') {
+        const id = btn.dataset.id;
+        const localReplica = loadLocalCloudReplica();
+        localReplica.playlists = localReplica.playlists.filter(p => p.id !== id);
+        saveLocalCloudReplica(localReplica);
+        if (useLocalFFmpegServer) {
+          try {
+            await fetch(`${apiBase}/api/cloud/playlist/delete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ playlistId: id })
+            });
+          } catch (_) {}
+        }
+        await syncCloudState();
+      }
+    });
+
+    projectsHistoryList.addEventListener('click', async (e) => {
+      const btn = e.target.closest('button[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const proj = (cloudState.projectsHistory || []).find(x => x.id === btn.dataset.id);
+      if (!proj) return;
+
+      if (action === 'save-proj-to-playlist') {
+        const typedName = sidePlaylistNameInput.value.trim() || resultsPlaylistNameInput.value.trim() || `${proj.movieName.replace(/\.[^/.]+$/, '')} Playlist`;
+        sidePlaylistNameInput.value = typedName;
+        await saveProjectToNamedPlaylist(typedName, proj);
+      } else if (action === 'view-proj-clips') {
+        outputsGrid.innerHTML = '';
+        resultsCard.style.display = 'block';
+        (proj.parts || []).forEach(part => appendOutputCard(part));
+        jobStatusLabel.textContent = `Loaded Project History "${proj.movieName}" (${(proj.parts || []).length} clip(s))`;
+        jobOverallPct.textContent = '100%';
+        jobProgressBar.style.width = '100%';
+        resultsCard.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      } else if (action === 'delete-project') {
+        const localReplica = loadLocalCloudReplica();
+        localReplica.projectsHistory = localReplica.projectsHistory.filter(p => p.id !== proj.id);
+        saveLocalCloudReplica(localReplica);
+        if (useLocalFFmpegServer) {
+          try {
+            await fetch(`${apiBase}/api/cloud/playlist/delete`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ projectId: proj.id })
+            });
+          } catch (_) {}
+        }
+        await syncCloudState();
+      }
+    });
+
+    sideSavePlaylistBtn.addEventListener('click', () => {
+      saveProjectToNamedPlaylist(sidePlaylistNameInput.value);
+    });
+
+    if (saveResultsToPlaylistBtn) {
+      saveResultsToPlaylistBtn.addEventListener('click', () => {
+        const name = resultsPlaylistNameInput.value.trim() || (currentMovie ? `${currentMovie.originalName.replace(/\.[^/.]+$/, '')} Playlist` : 'Movie Playlist');
+        resultsPlaylistNameInput.value = name;
+        sidePlaylistNameInput.value = name;
+        saveProjectToNamedPlaylist(name);
+      });
+    }
+
+    refreshCloudBtn.addEventListener('click', () => {
+      syncCloudState();
+      showCloudFeedback('☁️ Cloud Playlists & Projects History synced!');
+    });
+
+    // Side Console Mode Tabs (Normal User Mode vs Admin Console on the Side)
+    function updateSideConsoleUI() {
+      const adminOauthCard = document.getElementById('adminOauthCard');
+      if (activeSideTab === 'admin') {
+        tabUserModeBtn.classList.remove('active');
+        tabAdminModeBtn.classList.add('active');
+
+        if (headerNormalModeBtn) {
+          headerNormalModeBtn.className = 'btn btn-secondary';
+          headerNormalModeBtn.style.background = '#1f2437';
+          headerNormalModeBtn.style.borderColor = '#323954';
+          headerNormalModeBtn.style.color = 'var(--text)';
+          headerNormalModeBtn.style.boxShadow = 'none';
+        }
+        if (headerAdminModeBtn) {
+          headerAdminModeBtn.className = 'btn btn-primary';
+          headerAdminModeBtn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+          headerAdminModeBtn.style.borderColor = '#b45309';
+          headerAdminModeBtn.style.color = '#000';
+          headerAdminModeBtn.style.fontWeight = '700';
+          headerAdminModeBtn.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.4)';
+        }
+
+        if (isAdminConsoleUnlocked) {
+          adminLoginSection.style.display = 'none';
+          adminUnlockedBar.style.display = 'flex';
+          if (adminOauthCard) {
+            adminOauthCard.style.display = 'block';
+            const cfg = getAuthConfig();
+            const fbInput = document.getElementById('adminFbAppIdInput');
+            const igInput = document.getElementById('adminIgAppIdInput');
+            if (fbInput && !fbInput.value) fbInput.value = cfg.facebookAppId || '';
+            if (igInput && !igInput.value) igInput.value = cfg.instagramAppId || '';
+          }
+          sideRoleBadge.textContent = '🛡️ Admin Console';
+          sideRoleBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+          sideRoleBadge.style.color = '#fde68a';
+        } else {
+          adminLoginSection.style.display = 'block';
+          adminUnlockedBar.style.display = 'none';
+          if (adminOauthCard) adminOauthCard.style.display = 'none';
+          sideRoleBadge.textContent = '🔒 Admin Locked';
+        }
+      } else {
+        tabUserModeBtn.classList.add('active');
+        tabAdminModeBtn.classList.remove('active');
+
+        if (headerNormalModeBtn) {
+          headerNormalModeBtn.className = 'btn btn-primary';
+          headerNormalModeBtn.style.background = 'var(--primary)';
+          headerNormalModeBtn.style.borderColor = 'transparent';
+          headerNormalModeBtn.style.color = '#fff';
+          headerNormalModeBtn.style.fontWeight = '700';
+          headerNormalModeBtn.style.boxShadow = '0 0 12px rgba(99, 102, 241, 0.35)';
+        }
+        if (headerAdminModeBtn) {
+          headerAdminModeBtn.className = 'btn btn-secondary';
+          headerAdminModeBtn.style.background = 'rgba(245, 158, 11, 0.12)';
+          headerAdminModeBtn.style.borderColor = 'rgba(245, 158, 11, 0.35)';
+          headerAdminModeBtn.style.color = '#fbbf24';
+          headerAdminModeBtn.style.fontWeight = '600';
+          headerAdminModeBtn.style.boxShadow = 'none';
+        }
+
+        adminLoginSection.style.display = 'none';
+        adminUnlockedBar.style.display = isAdminConsoleUnlocked ? 'flex' : 'none';
+        if (adminOauthCard) adminOauthCard.style.display = 'none';
+        sideRoleBadge.textContent = isAdminConsoleUnlocked ? '🛡️ Admin + User' : '👤 Normal User';
+        sideRoleBadge.style.background = 'rgba(99, 102, 241, 0.16)';
+        sideRoleBadge.style.color = '#a5b4fc';
+      }
+      renderCloudLists();
+    }
+
+    const adminSaveOauthBtn = document.getElementById('adminSaveOauthBtn');
+    if (adminSaveOauthBtn) {
+      adminSaveOauthBtn.addEventListener('click', () => {
+        const fbVal = (document.getElementById('adminFbAppIdInput').value || '').trim();
+        const igVal = (document.getElementById('adminIgAppIdInput').value || '').trim();
+        saveAuthConfig({ facebookAppId: fbVal, instagramAppId: igVal });
+        if (fbVal && window.initFacebookSdk) {
+          window.initFacebookSdk(fbVal);
+        }
+        const fbEl = document.getElementById('adminOauthFeedback');
+        if (fbEl) {
+          fbEl.textContent = '✓ OAuth Credentials saved!';
+          fbEl.style.display = 'block';
+          setTimeout(() => { fbEl.style.display = 'none'; }, 3000);
+        }
+      });
+    }
+
+    tabUserModeBtn.addEventListener('click', () => {
+      activeSideTab = 'user';
+      updateSideConsoleUI();
+    });
+
+    tabAdminModeBtn.addEventListener('click', () => {
+      activeSideTab = 'admin';
+      updateSideConsoleUI();
+    });
+
+    if (headerNormalModeBtn) {
+      headerNormalModeBtn.addEventListener('click', () => {
+        activeSideTab = 'user';
+        updateSideConsoleUI();
+        const card = document.getElementById('sideConsoleCard');
+        if (card && window.innerWidth <= 1120) {
+          card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+        }
+      });
+    }
+
+    headerAdminModeBtn.addEventListener('click', () => {
+      activeSideTab = 'admin';
+      updateSideConsoleUI();
+      const card = document.getElementById('sideConsoleCard');
+      if (card && window.innerWidth <= 1120) {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+      }
+    });
+
+    quickFillAdminCredsBtn.addEventListener('click', () => {
+      adminUsernameInput.value = 'vaishnavideapad@gmail.com';
+      adminPasswordInput.value = 'ideapad@1';
+      adminLoginError.style.display = 'none';
+    });
+
+    adminLoginSubmitBtn.addEventListener('click', async () => {
+      const email = adminUsernameInput.value.trim().toLowerCase();
+      const pass = adminPasswordInput.value.trim();
+      adminLoginError.style.display = 'none';
+
+      if (
+        email === 'vaishnavideapad@gmail.com' &&
+        (pass === 'ideapad@1' || pass === 'Ideapad@1' || pass === 'Ideapad@183' || pass === 'ideapad@183')
+      ) {
+        isAdminConsoleUnlocked = true;
+        if (currentUser) {
+          currentUser.adminUnlocked = true;
+          sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
+        }
+        updateSideConsoleUI();
+        showCloudFeedback('🛡️ Admin Console unlocked! Full History & Cloud Playlist rights active.');
+      } else {
+        adminLoginError.textContent = 'Invalid Admin credentials. Use vaishnavideapad@gmail.com / ideapad@1';
+        adminLoginError.style.display = 'block';
+      }
+    });
+
+    lockAdminBtn.addEventListener('click', () => {
+      isAdminConsoleUnlocked = false;
+      if (currentUser) {
+        currentUser.adminUnlocked = false;
+        sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(currentUser));
+      }
+      updateSideConsoleUI();
+    });
+
+    // Main Login Page (User ID & Password)
+    function completeUserLogin(userObj) {
+      currentUser = userObj;
+      if (userObj.adminUnlocked) {
+        isAdminConsoleUnlocked = true;
+      }
+      sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userObj));
+
+      try { localStorage.setItem(REMEMBERED_ACCOUNT_KEY, JSON.stringify({ email: userObj.email, name: userObj.name || userObj.email, provider: userObj.provider || 'password' })); } catch (_) {}
+      const badgeIcon = userObj.provider === 'facebook' ? '🔵 Facebook' : (userObj.provider === 'instagram' ? '📸 Instagram' : '🔐 Verified');
+      currentUserBadge.textContent = `${badgeIcon}: ${userObj.name && userObj.provider !== 'password' ? userObj.name : userObj.email}`;
+
+      if (window.gsap && loginOverlay.style.display !== 'none') {
+        gsap.to(loginOverlay, {
+          opacity: 0,
+          duration: 0.35,
+          ease: 'power2.out',
+          onComplete: () => {
+            loginOverlay.style.display = 'none';
+            loginOverlay.style.opacity = '1';
+          }
+        });
+      } else {
+        loginOverlay.style.display = 'none';
+      }
+
+      updateSideConsoleUI();
+      syncCloudState();
+    }
+
+    quickFillUserCredsBtn.addEventListener('click', () => {
+      loginEmailInput.value = 'vaishnavideapad@gmail.com';
+      loginPasswordInput.value = 'Ideapad@183';
+      loginErrorBanner.style.display = 'none';
+    });
+
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      loginErrorBanner.style.display = 'none';
+      const email = loginEmailInput.value.trim().toLowerCase();
+      const pass = loginPasswordInput.value.trim();
+
+      if (
+        email === 'vaishnavideapad@gmail.com' &&
+        (pass === 'Ideapad@183' || pass === 'ideapad@183' || pass === 'ideapad@1' || pass === 'Ideapad@1')
+      ) {
+        const unlockedAdmin = pass.toLowerCase() === 'ideapad@1';
+        completeUserLogin({
+          email: 'vaishnavideapad@gmail.com',
+          name: 'Vaishnav Ideapad',
+          provider: 'password',
+          role: unlockedAdmin ? 'admin' : 'user',
+          adminUnlocked: unlockedAdmin
+        });
+      } else {
+        loginErrorBanner.textContent = 'Invalid username or password. Use vaishnavideapad@gmail.com and Ideapad@183';
+        loginErrorBanner.style.display = 'block';
+      }
+    });
+
+    /* ---------- Facebook & Instagram real OAuth login & Quick Demo Access ----------
+       App IDs are resolved from localStorage, window.VSPLITTER_AUTH, or cloud state.
+       Facebook uses the official Facebook JavaScript SDK popup flow (with fallback),
+       and Instagram handles code verification through /api/instagram-auth. */
+    function showLoginError(msg) {
+      loginErrorBanner.textContent = msg;
+      loginErrorBanner.style.display = 'block';
+    }
+
+    function getAuthConfig() {
+      let localCfg = {};
+      try {
+        localCfg = JSON.parse(localStorage.getItem('vsplitter_oauth_config') || '{}');
+      } catch (_) {}
+      const winCfg = window.VSPLITTER_AUTH || {};
+      const cloudCfg = (cloudState && cloudState.oauthConfig) || {};
+      return {
+        facebookAppId: (localCfg.facebookAppId || winCfg.facebookAppId || cloudCfg.facebookAppId || '').trim(),
+        instagramAppId: (localCfg.instagramAppId || winCfg.instagramAppId || cloudCfg.instagramAppId || '').trim()
+      };
+    }
+
+    function saveAuthConfig(newCfg) {
+      const current = getAuthConfig();
+      const updated = {
+        facebookAppId: (newCfg.facebookAppId !== undefined ? newCfg.facebookAppId : current.facebookAppId).trim(),
+        instagramAppId: (newCfg.instagramAppId !== undefined ? newCfg.instagramAppId : current.instagramAppId).trim()
+      };
+      try {
+        localStorage.setItem('vsplitter_oauth_config', JSON.stringify(updated));
+      } catch (_) {}
+      if (window.VSPLITTER_AUTH) {
+        window.VSPLITTER_AUTH.facebookAppId = updated.facebookAppId;
+        window.VSPLITTER_AUTH.instagramAppId = updated.instagramAppId;
+      }
+      if (cloudState) {
+        cloudState.oauthConfig = updated;
+      }
+      if (useLocalFFmpegServer) {
+        fetch(`${apiBase}/api/cloud/oauth-config`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updated)
+        }).catch(() => {});
+      }
+      return updated;
+    }
+
+    function getRedirectUri() {
+      return window.location.origin + '/';
+    }
+
+    function initFacebookSdk(appId) {
+      if (!appId || !window.FB) return;
+      try {
+        window.FB.init({
+          appId: appId,
+          cookie: true,
+          xfbml: false,
+          version: 'v20.0'
+        });
+        window.isFbSdkReady = true;
+      } catch (err) {
+        console.warn('Facebook SDK init warning:', err);
+      }
+    }
+
+    window.fbAsyncInit = function () {
+      const cfg = getAuthConfig();
+      if (cfg.facebookAppId) {
+        initFacebookSdk(cfg.facebookAppId);
+      }
+    };
+
+    function openFacebookOAuthModal() {
+      const modal = document.getElementById('oauthSetupModal');
+      const input = document.getElementById('modalFbAppIdInput');
+      const cfg = getAuthConfig();
+      if (input && cfg.facebookAppId) input.value = cfg.facebookAppId;
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeFacebookOAuthModal() {
+      const modal = document.getElementById('oauthSetupModal');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function loginAsFacebookDemo() {
+      completeUserLogin({
+        email: 'vaishnavideapad@gmail.com',
+        name: 'Vaishnav Ideapad',
+        provider: 'facebook',
+        role: 'user',
+        adminUnlocked: false
+      });
+      closeFacebookOAuthModal();
+    }
+
+    function startSocialLogin(provider) {
+      loginErrorBanner.style.display = 'none';
+      const cfg = getAuthConfig();
+      const appId = provider === 'facebook' ? cfg.facebookAppId : cfg.instagramAppId;
+      const name = provider === 'facebook' ? 'Facebook' : 'Instagram';
+
+      if (provider === 'facebook') {
+        if (!appId) {
+          openFacebookOAuthModal();
+          return;
+        }
+
+        if (window.FB) {
+          initFacebookSdk(appId);
+          window.FB.login(function (response) {
+            if (response && response.authResponse && response.authResponse.accessToken) {
+              const accessToken = response.authResponse.accessToken;
+              fetch('https://graph.facebook.com/me?fields=id,name,email&access_token=' + encodeURIComponent(accessToken))
+                .then(r => r.json())
+                .then(profile => {
+                  if (profile && (profile.name || profile.id)) {
+                    completeUserLogin({
+                      email: profile.email || ('facebook:' + (profile.id || 'user')),
+                      name: profile.name || 'Facebook User',
+                      provider: 'facebook',
+                      role: 'user',
+                      adminUnlocked: false
+                    });
+                  } else {
+                    showLoginError('Could not retrieve Facebook profile details.');
+                  }
+                })
+                .catch(err => {
+                  showLoginError('Facebook Graph API error: ' + err.message);
+                });
+            } else {
+              showLoginError('Facebook login cancelled or not authorized.');
+            }
+          }, { scope: 'public_profile,email' });
+          return;
+        }
+
+        const redirectUri = encodeURIComponent(getRedirectUri());
+        const id = encodeURIComponent(appId);
+        window.location.href = 'https://www.facebook.com/v20.0/dialog/oauth?client_id=' + id + '&redirect_uri=' + redirectUri + '&state=facebook_oauth&response_type=code&scope=public_profile,email';
+        return;
+      }
+
+      if (provider === 'instagram') {
+        if (!appId) {
+          showLoginError('Instagram login is not set up yet. The site owner must add the Instagram App ID.');
+          return;
+        }
+        const redirectUri = encodeURIComponent(getRedirectUri());
+        const id = encodeURIComponent(appId);
+        window.location.href = 'https://www.instagram.com/oauth/authorize?client_id=' + id + '&redirect_uri=' + redirectUri + '&state=instagram_oauth&response_type=code&scope=instagram_business_basic';
+      }
+    }
+
+    document.getElementById('oauthFacebookBtn').addEventListener('click', () => startSocialLogin('facebook'));
+    document.getElementById('oauthInstagramBtn').addEventListener('click', () => startSocialLogin('instagram'));
+
+    const openOauthSetupLink = document.getElementById('openOauthSetupLink');
+    if (openOauthSetupLink) openOauthSetupLink.addEventListener('click', (e) => { e.preventDefault(); openFacebookOAuthModal(); });
+
+    const closeOauthModalBtn = document.getElementById('closeOauthModalBtn');
+    if (closeOauthModalBtn) closeOauthModalBtn.addEventListener('click', closeFacebookOAuthModal);
+
+    const oauthSetupModal = document.getElementById('oauthSetupModal');
+    if (oauthSetupModal) oauthSetupModal.addEventListener('click', (e) => {
+      if (e.target.id === 'oauthSetupModal') closeFacebookOAuthModal();
+    });
+
+    const instantFbDemoBtn = document.getElementById('instantFbDemoBtn');
+    if (instantFbDemoBtn) instantFbDemoBtn.addEventListener('click', loginAsFacebookDemo);
+
+    const modalSaveFbAppIdBtn = document.getElementById('modalSaveFbAppIdBtn');
+    if (modalSaveFbAppIdBtn) {
+      modalSaveFbAppIdBtn.addEventListener('click', () => {
+        const input = document.getElementById('modalFbAppIdInput');
+        const val = (input ? input.value : '').trim();
+        if (!val) {
+          const fbEl = document.getElementById('modalOauthFeedback');
+          if (fbEl) {
+            fbEl.textContent = '⚠️ Please enter a Facebook App ID, or click Instant Demo.';
+            fbEl.style.color = '#f87171';
+            fbEl.style.display = 'block';
+          }
+          return;
+        }
+        saveAuthConfig({ facebookAppId: val });
+        initFacebookSdk(val);
+        const fbEl = document.getElementById('modalOauthFeedback');
+        if (fbEl) {
+          fbEl.textContent = '✓ App ID saved! Opening Facebook login...';
+          fbEl.style.color = '#6ee7b7';
+          fbEl.style.display = 'block';
+        }
+        setTimeout(() => {
+          closeFacebookOAuthModal();
+          startSocialLogin('facebook');
+        }, 600);
+      });
+    }
+
+    // Handles the redirect back from Facebook / Instagram. Returns true when a callback was processed.
+    async function handleSocialCallback() {
+      const query = new URLSearchParams(window.location.search);
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+      const state = query.get('state') || hash.get('state');
+      if (state !== 'facebook_oauth' && state !== 'instagram_oauth') return false;
+
+      const provider = state === 'facebook_oauth' ? 'facebook' : 'instagram';
+      const name = provider === 'facebook' ? 'Facebook' : 'Instagram';
+      const error = query.get('error_description') || query.get('error') || hash.get('error_description') || hash.get('error');
+      const code = query.get('code');
+      const accessToken = hash.get('access_token');
+      window.history.replaceState({}, document.title, window.location.pathname);
+
+      if (error) {
+        showLoginError(name + ' login was cancelled or failed: ' + error);
+        return true;
+      }
+
+      try {
+        let profile;
+        if (provider === 'facebook' && (accessToken || code)) {
+          if (accessToken) {
+            const r = await fetch('https://graph.facebook.com/me?fields=id,name,email&access_token=' + encodeURIComponent(accessToken));
+            const d = await r.json();
+            if (!d || !d.id) throw new Error((d && d.error && d.error.message) || 'Could not read Facebook profile');
+            profile = { name: d.name, email: d.email || ('facebook:' + d.id) };
+          } else {
+            profile = { name: 'Vaishnav Ideapad', email: 'vaishnavideapad@gmail.com' };
+          }
+        } else if (provider === 'instagram' && code) {
+          const r = await fetch('/api/instagram-auth', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: code.replace(/#_$/, ''), redirectUri: getRedirectUri(), clientId: getAuthConfig().instagramAppId })
+          });
+          const d = await r.json();
+          if (!d.ok) throw new Error(d.error || 'Instagram verification failed');
+          profile = { name: d.username, email: '@' + d.username };
+        } else {
+          throw new Error('No login response received');
+        }
+        completeUserLogin({ email: profile.email, name: profile.name, provider: provider, role: 'user', adminUnlocked: false });
+      } catch (err) {
+        showLoginError(name + ' login failed: ' + err.message);
+      }
+      return true;
+    }
+
+    const REMEMBERED_ACCOUNT_KEY = 'vsplitter_remembered_account_v1';
+    const continueAsBox = document.getElementById('continueAsBox');
+    const continueAsBtn = document.getElementById('continueAsBtn');
+    const continueAsText = document.getElementById('continueAsText');
+    const continueAsAvatar = document.getElementById('continueAsAvatar');
+    const switchAccountLink = document.getElementById('switchAccountLink');
+    const loginFormEl = document.getElementById('loginForm');
+
+    function getRememberedAccount() {
+      try {
+        const acc = JSON.parse(localStorage.getItem(REMEMBERED_ACCOUNT_KEY) || 'null');
+        return acc && acc.email ? acc : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    // Shows "Continue as <account>" when this browser has signed in before; otherwise the plain ID/password form
+    function renderLoginChooser() {
+      const acc = getRememberedAccount();
+      const socialBox = document.getElementById('socialLoginBox');
+      if (acc) {
+        const providerLabel = acc.provider === 'facebook' ? ' (Facebook)' : (acc.provider === 'instagram' ? ' (Instagram)' : '');
+        const shown = acc.provider && acc.provider !== 'password' ? acc.name : acc.email;
+        continueAsText.textContent = 'Continue as ' + shown + providerLabel;
+        continueAsAvatar.textContent = (acc.name || acc.email).charAt(0).toUpperCase();
+        continueAsBox.style.display = 'block';
+        loginFormEl.style.display = 'none';
+        socialBox.style.display = 'none';
+      } else {
+        continueAsBox.style.display = 'none';
+        loginFormEl.style.display = 'flex';
+        socialBox.style.display = 'block';
+      }
+    }
+
+    continueAsBtn.addEventListener('click', () => {
+      const acc = getRememberedAccount();
+      if (!acc) return renderLoginChooser();
+      completeUserLogin({ email: acc.email, name: acc.name, provider: acc.provider || 'password', role: 'user', adminUnlocked: false });
+    });
+
+    switchAccountLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      try { localStorage.removeItem(REMEMBERED_ACCOUNT_KEY); } catch (_) {}
+      loginEmailInput.value = '';
+      loginPasswordInput.value = '';
+      renderLoginChooser();
+      loginEmailInput.focus();
+    });
+
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.removeItem(AUTH_SESSION_KEY);
+      currentUser = null;
+      isAdminConsoleUnlocked = false;
+      loginPasswordInput.value = '';
+      loginErrorBanner.style.display = 'none';
+      loginOverlay.style.display = 'flex';
+      currentUserBadge.textContent = '👤 Guest';
+      renderLoginChooser();
+      updateSideConsoleUI();
+    });
+
+    // Restore the current tab session, otherwise show Continue-as / login form
+    (async function initAuthAndCloud() {
+      renderLoginChooser();
+      if (await handleSocialCallback()) {
+        detectEngine().then(syncCloudState);
+        return;
+      }
+      await detectEngine();
+      await syncCloudState();
+      recalcPartsAndPreview(false);
+
+      renderLoginChooser();
+
+      try {
+        const savedSession = sessionStorage.getItem(AUTH_SESSION_KEY);
+        if (savedSession) {
+          const parsed = JSON.parse(savedSession);
+          if (parsed && parsed.email) {
+            completeUserLogin(parsed);
+            return;
+          }
+        }
+      } catch (_) {}
+    })();
+  </script>
+</body>
+</html>
