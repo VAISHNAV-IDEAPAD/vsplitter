@@ -2370,18 +2370,26 @@
             jobErrorBanner.textContent = '';
           }
 
-          const ext = blob.type.includes('mp4') ? 'mp4' : 'webm';
+          let finalBlob = blob;
+          try {
+            finalBlob = await patchMediaBlobDuration(blob, actualDuration);
+          } catch (pErr) {
+            console.warn('patchMediaBlobDuration error:', pErr);
+          }
+
+          const ext = finalBlob.type.includes('mp4') ? 'mp4' : 'webm';
           const fileName = `${safeBaseName}_Part_${partNum}.${ext}`;
-          const clipUrl = URL.createObjectURL(blob);
+          const clipUrl = URL.createObjectURL(finalBlob);
 
           const partRecord = {
             partNumber: partNum,
             totalParts,
             fileName,
             url: clipUrl,
+            duration: actualDuration,
             durationFormatted: formatTime(actualDuration),
             timeRangeFormatted: `${formatTime(startTime)} - ${formatTime(startTime + actualDuration)}`,
-            sizeBytes: blob.size,
+            sizeBytes: finalBlob.size,
             isBlobUrl: true
           };
           generatedPartsList.push(partRecord);
@@ -2600,6 +2608,126 @@
       ctx.fillText('AUDIO/VIDEO SYNC VISUALIZER', drawX + scaledW / 2, baseBarY + 30);
 
       ctx.restore();
+    }
+
+    // Binary ISO BMFF & EBML Header Patchers to permanently embed exact 4m 55s (295s) duration in media files
+    function patchMp4Duration(buffer, targetDurationSec) {
+      try {
+        const view = new DataView(buffer);
+        let mvhdTimescale = 1000;
+        let foundMvhd = false;
+
+        // Pass 1: find mvhd to read timescale and patch duration
+        for (let i = 4; i < Math.min(buffer.byteLength, 256 * 1024) - 8; i++) {
+          if (
+            view.getUint8(i) === 0x6D && view.getUint8(i+1) === 0x76 &&
+            view.getUint8(i+2) === 0x68 && view.getUint8(i+3) === 0x64
+          ) { // 'mvhd'
+            const boxStart = i - 4;
+            const version = view.getUint8(boxStart + 8);
+            if (version === 0 && boxStart + 28 <= buffer.byteLength) {
+              mvhdTimescale = view.getUint32(boxStart + 20) || 1000;
+              const durUnits = Math.round(targetDurationSec * mvhdTimescale);
+              view.setUint32(boxStart + 24, durUnits);
+              foundMvhd = true;
+            } else if (version === 1 && boxStart + 40 <= buffer.byteLength) {
+              mvhdTimescale = view.getUint32(boxStart + 28) || 1000;
+              const durUnits = BigInt(Math.round(targetDurationSec * mvhdTimescale));
+              view.setBigUint64(boxStart + 32, durUnits);
+              foundMvhd = true;
+            }
+            break;
+          }
+        }
+
+        // Pass 2: patch tkhd and mehd boxes
+        for (let i = 4; i < Math.min(buffer.byteLength, 256 * 1024) - 8; i++) {
+          // 'tkhd'
+          if (
+            view.getUint8(i) === 0x74 && view.getUint8(i+1) === 0x6B &&
+            view.getUint8(i+2) === 0x68 && view.getUint8(i+3) === 0x64
+          ) {
+            const boxStart = i - 4;
+            const version = view.getUint8(boxStart + 8);
+            if (version === 0 && boxStart + 32 <= buffer.byteLength) {
+              const durUnits = Math.round(targetDurationSec * mvhdTimescale);
+              view.setUint32(boxStart + 28, durUnits);
+            } else if (version === 1 && boxStart + 44 <= buffer.byteLength) {
+              const durUnits = BigInt(Math.round(targetDurationSec * mvhdTimescale));
+              view.setBigUint64(boxStart + 36, durUnits);
+            }
+          }
+
+          // 'mehd' (movie extends header box)
+          if (
+            view.getUint8(i) === 0x6D && view.getUint8(i+1) === 0x65 &&
+            view.getUint8(i+2) === 0x68 && view.getUint8(i+3) === 0x64
+          ) {
+            const boxStart = i - 4;
+            const version = view.getUint8(boxStart + 8);
+            if (version === 0 && boxStart + 16 <= buffer.byteLength) {
+              const durUnits = Math.round(targetDurationSec * mvhdTimescale);
+              view.setUint32(boxStart + 12, durUnits);
+            } else if (version === 1 && boxStart + 20 <= buffer.byteLength) {
+              const durUnits = BigInt(Math.round(targetDurationSec * mvhdTimescale));
+              view.setBigUint64(boxStart + 12, durUnits);
+            }
+          }
+        }
+        return foundMvhd;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function patchWebmDuration(buffer, targetDurationSec) {
+      try {
+        const view = new DataView(buffer);
+        const targetMs = targetDurationSec * 1000.0;
+        for (let i = 0; i < Math.min(buffer.byteLength, 256 * 1024) - 10; i++) {
+          if (view.getUint8(i) === 0x44 && view.getUint8(i+1) === 0x89) {
+            const lenByte = view.getUint8(i+2);
+            if (lenByte === 0x84) {
+              view.setFloat32(i + 3, targetMs);
+              return true;
+            } else if (lenByte === 0x88) {
+              view.setFloat64(i + 3, targetMs);
+              return true;
+            }
+          }
+        }
+        return false;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    function hasMp4Signature(buffer) {
+      if (buffer.byteLength < 8) return false;
+      const v = new Uint8Array(buffer, 4, 4);
+      return v[0] === 0x66 && v[1] === 0x74 && v[2] === 0x79 && v[3] === 0x70; // 'ftyp'
+    }
+
+    async function patchMediaBlobDuration(blob, durationSec) {
+      if (!blob || !durationSec || durationSec <= 0) return blob;
+      try {
+        const type = blob.type || '';
+        const headerSize = Math.min(blob.size, 256 * 1024);
+        const headerBuffer = await blob.slice(0, headerSize).arrayBuffer();
+        let patched = false;
+        if (type.includes('mp4') || hasMp4Signature(headerBuffer)) {
+          patched = patchMp4Duration(headerBuffer, durationSec);
+        } else {
+          patched = patchWebmDuration(headerBuffer, durationSec);
+        }
+        if (patched) {
+          const restBlob = blob.slice(headerSize);
+          return new Blob([headerBuffer, restBlob], { type: blob.type });
+        }
+      } catch (err) {
+        console.warn('Could not patch blob duration header:', err);
+      }
+      return blob;
     }
 
     // Hardware-Accelerated WebCodecs + MP4-Muxer High-Speed Renderer (Retaining full H.264 + AAC 1.0x quality & perfect sync)
@@ -3056,7 +3184,7 @@
 
           const chunks = [];
           recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-          recorder.onstop = () => {
+          recorder.onstop = async () => {
             recordingActive = false;
             const finalType = recorder.mimeType || mime || 'video/mp4';
             if (jobErrorBanner) {
@@ -3064,7 +3192,13 @@
               jobErrorBanner.textContent = '';
             }
             cleanup();
-            resolve(new Blob(chunks, { type: finalType }));
+            const rawBlob = new Blob(chunks, { type: finalType });
+            try {
+              const patched = await patchMediaBlobDuration(rawBlob, duration);
+              resolve(patched);
+            } catch (_) {
+              resolve(rawBlob);
+            }
           };
 
           const zoomRatio = Math.max(1.0, Math.min(2.4, Number(options.frameZoomRatio) || 1.35));
@@ -3204,12 +3338,37 @@
       const sizeMB = (part.sizeBytes / (1024 * 1024)).toFixed(1);
       const videoSrc = part.isBlobUrl ? part.url : `${apiBase}${part.url}`;
       const downloadHref = part.isBlobUrl ? part.url : `${apiBase}${part.url}?download=1`;
-      const durText = part.durationFormatted || '4:55';
+      const durSec = Number(part.duration) || 295;
+      const durText = part.durationFormatted || formatTime(durSec) || '4:55';
+
       card.innerHTML = `
-        <div style="position: relative; width: 100%; background: #000; border-radius: 8px 8px 0 0; overflow: hidden;">
-          <video controls preload="metadata" playsinline webkit-playsinline src="${videoSrc}" style="width: 100%; display: block; aspect-ratio: 9/16; max-height: 480px; object-fit: contain;"></video>
-          <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.85); color: #34d399; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.5); pointer-events: none; z-index: 2;">⏱️ ${durText} (Default)</div>
+        <div class="custom-player-wrapper" style="position: relative; width: 100%; background: #000; border-radius: 8px 8px 0 0; overflow: hidden; user-select: none;">
+          <video preload="metadata" playsinline webkit-playsinline src="${videoSrc}" style="width: 100%; display: block; aspect-ratio: 9/16; max-height: 480px; object-fit: contain; cursor: pointer;"></video>
+          
+          <!-- Top permanent badge: Guaranteed 4:55 / 4m 55s Default on thumbnail -->
+          <div style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.85); color: #34d399; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(16,185,129,0.5); pointer-events: none; z-index: 3;">⏱️ ${durText} (Default)</div>
+          
+          <!-- Big Center Play Button Overlay -->
+          <div class="custom-play-overlay" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.22); cursor: pointer; transition: opacity 0.2s; z-index: 2;">
+            <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(99, 102, 241, 0.95); box-shadow: 0 4px 20px rgba(99, 102, 241, 0.55); display: flex; align-items: center; justify-content: center; font-size: 26px; color: #fff; padding-left: 4px; pointer-events: none;">▶</div>
+          </div>
+
+          <!-- Bottom Custom Cinema Control Bar: Permanently displays 0:00 / 4:55 - never 4 seconds! -->
+          <div class="custom-controls-bar" style="position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.7) 65%, transparent 100%); padding: 12px 14px 10px; display: flex; flex-direction: column; gap: 7px; z-index: 3;">
+            <input type="range" class="custom-scrub-input" min="0" max="${durSec}" step="0.1" value="0" style="width: 100%; height: 5px; accent-color: #6366f1; cursor: pointer; margin: 0; padding: 0;" />
+            <div style="display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: #f3f4f6;">
+              <div style="display: flex; align-items: center; gap: 10px;">
+                <button type="button" class="custom-bar-play-btn" style="background: none; border: none; color: #fff; font-size: 15px; cursor: pointer; padding: 0; line-height: 1;">▶</button>
+                <span class="custom-time-counter" style="font-family: monospace; font-weight: 700; color: #34d399; font-size: 12.5px;">0:00 / ${durText}</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 12px;">
+                <button type="button" class="custom-mute-btn" style="background: none; border: none; color: #fff; font-size: 15px; cursor: pointer; padding: 0;" title="Mute/Unmute">🔊</button>
+                <button type="button" class="custom-fs-btn" style="background: none; border: none; color: #fff; font-size: 15px; cursor: pointer; padding: 0;" title="Fullscreen">⛶</button>
+              </div>
+            </div>
+          </div>
         </div>
+
         <div class="output-card-body">
           <div class="output-card-title">
             <span>Part ${part.partNumber}</span>
@@ -3227,14 +3386,81 @@
       outputsGrid.appendChild(card);
 
       const vid = card.querySelector('video');
+      const playOverlay = card.querySelector('.custom-play-overlay');
+      const barPlayBtn = card.querySelector('.custom-bar-play-btn');
+      const timeCounter = card.querySelector('.custom-time-counter');
+      const scrubInput = card.querySelector('.custom-scrub-input');
+      const muteBtn = card.querySelector('.custom-mute-btn');
+      const fsBtn = card.querySelector('.custom-fs-btn');
+
+      const togglePlay = () => {
+        if (!vid) return;
+        if (vid.paused || vid.ended) {
+          vid.play().catch(() => {});
+        } else {
+          vid.pause();
+        }
+      };
+
+      if (playOverlay) playOverlay.addEventListener('click', togglePlay);
+      if (barPlayBtn) barPlayBtn.addEventListener('click', togglePlay);
       if (vid) {
-        // Fix for Chromium MediaRecorder WebM/MP4 duration bug where duration displays Infinity or 0:04
-        vid.addEventListener('loadedmetadata', () => {
-          if (!isFinite(vid.duration) || vid.duration < 10) {
-            vid.currentTime = 1e101;
-            vid.addEventListener('seeked', () => {
-              vid.currentTime = 0;
-            }, { once: true });
+        vid.addEventListener('click', togglePlay);
+
+        vid.addEventListener('play', () => {
+          if (playOverlay) playOverlay.style.opacity = '0';
+          if (barPlayBtn) barPlayBtn.textContent = '⏸';
+        });
+
+        vid.addEventListener('pause', () => {
+          if (playOverlay) playOverlay.style.opacity = '1';
+          if (barPlayBtn) barPlayBtn.textContent = '▶';
+        });
+
+        vid.addEventListener('timeupdate', () => {
+          const cur = vid.currentTime || 0;
+          if (scrubInput) scrubInput.value = cur;
+          if (timeCounter) timeCounter.textContent = `${formatTime(cur)} / ${durText}`;
+        });
+
+        vid.addEventListener('ended', () => {
+          if (playOverlay) playOverlay.style.opacity = '1';
+          if (barPlayBtn) barPlayBtn.textContent = '▶';
+          vid.currentTime = 0;
+          if (scrubInput) scrubInput.value = 0;
+          if (timeCounter) timeCounter.textContent = `0:00 / ${durText}`;
+        });
+
+        const updateDur = () => {
+          const realDur = (isFinite(vid.duration) && vid.duration > 10) ? vid.duration : durSec;
+          if (scrubInput) scrubInput.max = realDur;
+          if (timeCounter) timeCounter.textContent = `${formatTime(vid.currentTime || 0)} / ${durText}`;
+        };
+        vid.addEventListener('loadedmetadata', updateDur);
+        if (vid.readyState >= 1) updateDur();
+      }
+
+      if (scrubInput && vid) {
+        scrubInput.addEventListener('input', () => {
+          const val = Number(scrubInput.value);
+          if (timeCounter) timeCounter.textContent = `${formatTime(val)} / ${durText}`;
+          vid.currentTime = val;
+        });
+      }
+
+      if (muteBtn && vid) {
+        muteBtn.addEventListener('click', () => {
+          vid.muted = !vid.muted;
+          muteBtn.textContent = vid.muted ? '🔇' : '🔊';
+        });
+      }
+
+      if (fsBtn && vid) {
+        fsBtn.addEventListener('click', () => {
+          if (vid.requestFullscreen) {
+            vid.requestFullscreen();
+          } else if (vid.webkitRequestFullscreen) {
+            vid.webkitRequestFullscreen();
           }
         });
       }
