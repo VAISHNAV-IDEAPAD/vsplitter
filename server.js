@@ -1052,7 +1052,7 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(PORT, () => {
   console.log(`\n======================================================`);
-  console.log(`  V Splitter is running!`);
+  console.log(`  Dhondiyal_G is running!`);
   console.log(`  Open in browser: http://localhost:${PORT}`);
   console.log(`======================================================\n`);
 });

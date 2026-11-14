@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>V Splitter — 4:55 Vertical Clip Studio</title>
+  <title>Dhondiyal_G — 4:55 Vertical Clip Studio</title>
   <!-- Three.js, GSAP & MP4-Muxer (Hardware WebCodecs Turbo Engine) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
@@ -843,16 +843,16 @@
   <div class="login-overlay" id="loginOverlay">
     <div class="login-card" id="loginCardBox">
       <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
-        <div class="brand-icon" style="width: 44px; height: 44px; font-size: 20px;">V</div>
+        <div class="brand-icon" style="width: 44px; height: 44px; font-size: 20px;">DG</div>
         <div>
-          <h2 style="font-size: 20px; font-weight: 800; line-height: 1.2;">Sign In to V Splitter</h2>
+          <h2 style="font-size: 20px; font-weight: 800; line-height: 1.2;">Sign In to Dhondiyal_G</h2>
           <span style="font-size: 12px; color: var(--muted);">Cloud Playlist Studio &amp; 4m 55s Vertical Video Engine</span>
         </div>
       </div>
 
       <div id="continueAsBox" style="display: none; margin-bottom: 16px;">
         <button type="button" class="btn btn-accent btn-lg" id="continueAsBtn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;">
-          <span id="continueAsAvatar" style="width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.25); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">V</span>
+          <span id="continueAsAvatar" style="width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,0.25); display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 13px;">DG</span>
           <span id="continueAsText">Continue as</span>
         </button>
         <div style="text-align: center; margin-top: 10px; font-size: 12px; color: var(--muted);">
@@ -945,8 +945,8 @@
         <strong style="color: #cbd5e1;">How to get your Meta App ID:</strong><br/>
         1. Open <a href="https://developers.facebook.com/apps" target="_blank" style="color: #60a5fa; text-decoration: underline;">developers.facebook.com/apps</a><br/>
         2. Create App &rarr; Choose <em>Authenticate and request data with Facebook Login</em><br/>
-        3. Under <strong>App Domains</strong> add <code style="color: #fde68a;">vsplitter.vercel.app</code><br/>
-        4. Under <strong>Valid OAuth Redirect URIs</strong> add <code style="color: #fde68a;">https://vsplitter.vercel.app/</code><br/>
+        3. Under <strong>App Domains</strong> add <code style="color: #fde68a;">Dhondiyal_G.vercel.app</code> (or current domain)<br/>
+        4. Under <strong>Valid OAuth Redirect URIs</strong> add <code style="color: #fde68a;">https://Dhondiyal_G.vercel.app/</code> (or current domain)<br/>
         5. Copy the 15-digit App ID at the top and paste it above!
       </div>
     </div>
@@ -954,9 +954,9 @@
 
   <header>
     <div class="brand">
-      <div class="brand-icon">V</div>
+      <div class="brand-icon">DG</div>
       <div>
-        <h1>V Splitter</h1>
+        <h1>Dhondiyal_G</h1>
         <span>MKV &amp; MP4 to 4m 55s Black-Background Vertical Parts (Part 1 … Part N)</span>
       </div>
     </div>
@@ -1897,7 +1897,7 @@
 
       tempVideo.onerror = () => {
         cleanupTemp();
-        showLoadError('Could not decode this video format directly in browser. Please use standard MP4 (H.264) or run Start-V-Splitter.bat locally for full MKV support.');
+        showLoadError('Could not decode this video format directly in browser. Please use standard MP4 (H.264) or run Start-Dhondiyal_G.bat locally for full MKV support.');
       };
 
       tempVideo.src = browserVideoUrl;
@@ -3570,8 +3570,10 @@
     /* =========================================================================
        AUTHENTICATION, SIDE ADMIN CONSOLE & CLOUD PLAYLISTS
        ========================================================================= */
-    const CLOUD_STORAGE_KEY = 'vsplitter_cloud_server_db_v1';
-    const AUTH_SESSION_KEY = 'vsplitter_auth_session_v1';
+    const CLOUD_STORAGE_KEY = 'dhondiyal_g_cloud_server_db_v1';
+    const LEGACY_CLOUD_STORAGE_KEY = 'vsplitter_cloud_server_db_v1';
+    const AUTH_SESSION_KEY = 'dhondiyal_g_auth_session_v1';
+    const LEGACY_AUTH_SESSION_KEY = 'vsplitter_auth_session_v1';
 
     const loginOverlay = document.getElementById('loginOverlay');
     const loginForm = document.getElementById('loginForm');
@@ -3608,7 +3610,7 @@
 
     function loadLocalCloudReplica() {
       try {
-        const raw = localStorage.getItem(CLOUD_STORAGE_KEY);
+        const raw = localStorage.getItem(CLOUD_STORAGE_KEY) || localStorage.getItem(LEGACY_CLOUD_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
           return {
@@ -4132,7 +4134,10 @@
       }
       sessionStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(userObj));
 
-      try { localStorage.setItem(REMEMBERED_ACCOUNT_KEY, JSON.stringify({ email: userObj.email, name: userObj.name || userObj.email, provider: userObj.provider || 'password' })); } catch (_) {}
+      try { 
+        localStorage.setItem(REMEMBERED_ACCOUNT_KEY, JSON.stringify({ email: userObj.email, name: userObj.name || userObj.email, provider: userObj.provider || 'password' }));
+        localStorage.setItem(LEGACY_REMEMBERED_ACCOUNT_KEY, JSON.stringify({ email: userObj.email, name: userObj.name || userObj.email, provider: userObj.provider || 'password' }));
+      } catch (_) {}
       const badgeIcon = userObj.provider === 'facebook' ? '🔵 Facebook' : (userObj.provider === 'instagram' ? '📸 Instagram' : '🔐 Verified');
       currentUserBadge.textContent = `${badgeIcon}: ${userObj.name && userObj.provider !== 'password' ? userObj.name : userObj.email}`;
 
@@ -4185,7 +4190,7 @@
     });
 
     /* ---------- Facebook & Instagram real OAuth login & Quick Demo Access ----------
-       App IDs are resolved from localStorage, window.VSPLITTER_AUTH, or cloud state.
+       App IDs are resolved from localStorage, window.DHONDIYAL_G_AUTH / window.VSPLITTER_AUTH, or cloud state.
        Facebook uses the official Facebook JavaScript SDK popup flow (with fallback),
        and Instagram handles code verification through /api/instagram-auth. */
     function showLoginError(msg) {
@@ -4196,9 +4201,9 @@
     function getAuthConfig() {
       let localCfg = {};
       try {
-        localCfg = JSON.parse(localStorage.getItem('vsplitter_oauth_config') || '{}');
+        localCfg = JSON.parse(localStorage.getItem('dhondiyal_g_oauth_config') || localStorage.getItem('vsplitter_oauth_config') || '{}');
       } catch (_) {}
-      const winCfg = window.VSPLITTER_AUTH || {};
+      const winCfg = window.DHONDIYAL_G_AUTH || window.VSPLITTER_AUTH || {};
       const cloudCfg = (cloudState && cloudState.oauthConfig) || {};
       return {
         facebookAppId: (localCfg.facebookAppId || winCfg.facebookAppId || cloudCfg.facebookAppId || '').trim(),
@@ -4213,8 +4218,13 @@
         instagramAppId: (newCfg.instagramAppId !== undefined ? newCfg.instagramAppId : current.instagramAppId).trim()
       };
       try {
+        localStorage.setItem('dhondiyal_g_oauth_config', JSON.stringify(updated));
         localStorage.setItem('vsplitter_oauth_config', JSON.stringify(updated));
       } catch (_) {}
+      if (window.DHONDIYAL_G_AUTH) {
+        window.DHONDIYAL_G_AUTH.facebookAppId = updated.facebookAppId;
+        window.DHONDIYAL_G_AUTH.instagramAppId = updated.instagramAppId;
+      }
       if (window.VSPLITTER_AUTH) {
         window.VSPLITTER_AUTH.facebookAppId = updated.facebookAppId;
         window.VSPLITTER_AUTH.instagramAppId = updated.instagramAppId;
@@ -4436,7 +4446,8 @@
       return true;
     }
 
-    const REMEMBERED_ACCOUNT_KEY = 'vsplitter_remembered_account_v1';
+    const REMEMBERED_ACCOUNT_KEY = 'dhondiyal_g_remembered_account_v1';
+    const LEGACY_REMEMBERED_ACCOUNT_KEY = 'vsplitter_remembered_account_v1';
     const continueAsBox = document.getElementById('continueAsBox');
     const continueAsBtn = document.getElementById('continueAsBtn');
     const continueAsText = document.getElementById('continueAsText');
@@ -4446,7 +4457,7 @@
 
     function getRememberedAccount() {
       try {
-        const acc = JSON.parse(localStorage.getItem(REMEMBERED_ACCOUNT_KEY) || 'null');
+        const acc = JSON.parse(localStorage.getItem(REMEMBERED_ACCOUNT_KEY) || localStorage.getItem(LEGACY_REMEMBERED_ACCOUNT_KEY) || 'null');
         return acc && acc.email ? acc : null;
       } catch (_) {
         return null;
@@ -4480,7 +4491,10 @@
 
     switchAccountLink.addEventListener('click', (e) => {
       e.preventDefault();
-      try { localStorage.removeItem(REMEMBERED_ACCOUNT_KEY); } catch (_) {}
+      try { 
+        localStorage.removeItem(REMEMBERED_ACCOUNT_KEY); 
+        localStorage.removeItem(LEGACY_REMEMBERED_ACCOUNT_KEY);
+      } catch (_) {}
       loginEmailInput.value = '';
       loginPasswordInput.value = '';
       renderLoginChooser();
@@ -4489,6 +4503,7 @@
 
     logoutBtn.addEventListener('click', () => {
       sessionStorage.removeItem(AUTH_SESSION_KEY);
+      sessionStorage.removeItem(LEGACY_AUTH_SESSION_KEY);
       currentUser = null;
       isAdminConsoleUnlocked = false;
       loginPasswordInput.value = '';
@@ -4513,7 +4528,7 @@
       renderLoginChooser();
 
       try {
-        const savedSession = sessionStorage.getItem(AUTH_SESSION_KEY);
+        const savedSession = sessionStorage.getItem(AUTH_SESSION_KEY) || sessionStorage.getItem(LEGACY_AUTH_SESSION_KEY);
         if (savedSession) {
           const parsed = JSON.parse(savedSession);
           if (parsed && parsed.email) {

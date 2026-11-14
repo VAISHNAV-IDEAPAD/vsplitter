@@ -1,7 +1,7 @@
 {
-  "name": "v-splitter",
+  "name": "dhondiyal-g",
   "version": "1.0.0",
-  "description": "V Splitter - Split MKV and MP4 movies into 4m 55s vertical parts with black background and static Part 1..N subtitles",
+  "description": "Dhondiyal_G - Split MKV and MP4 movies into 4m 55s vertical parts with black background and static Part 1..N subtitles",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
