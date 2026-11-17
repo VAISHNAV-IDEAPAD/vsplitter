@@ -2220,6 +2220,17 @@
         clipDur = 295;
       }
 
+      // Automatically cap requested range to total parts available in current movie
+      const totalMovieParts = Math.max(1, Math.ceil((currentMovie.duration || 650) / clipDur));
+      let reqStart = parseInt(startPartInput.value, 10) || 1;
+      let reqEnd = parseInt(endPartInput.value, 10) || totalMovieParts;
+      if (reqStart > totalMovieParts) reqStart = totalMovieParts;
+      if (reqStart < 1) reqStart = 1;
+      if (reqEnd > totalMovieParts) reqEnd = totalMovieParts;
+      if (reqEnd < reqStart) reqEnd = reqStart;
+      startPartInput.value = String(reqStart);
+      endPartInput.value = String(reqEnd);
+
       const options = {
         clipDurationSeconds: clipDur,
         subtitleTemplate: subtitleTemplate.value || 'Part {n}',
@@ -2229,8 +2240,8 @@
         movieTitle: movieTitle.value.trim(),
         audioTrackIndex: Number(audioTrackSelect.value) || 0,
         resolution: resolutionSelect.value,
-        startPart: Number(startPartInput.value) || 1,
-        endPart: Number(endPartInput.value) || 1,
+        startPart: reqStart,
+        endPart: reqEnd,
         encoder: encoderSelect ? encoderSelect.value : 'cpu',
         frameZoomRatio: Number(frameZoomRatioSelect ? frameZoomRatioSelect.value : 1.35) || 1.35,
         aspectRatio: aspectRatioSelect ? aspectRatioSelect.value : '9:16',
@@ -2289,6 +2300,7 @@
 
         const safeBaseName = currentMovie.originalName.replace(/\.[^/.]+$/, '').replace(/[^a-zA-Z0-9_-]/g, '_') || 'Movie';
         const generatedPartsList = [];
+        let lastRenderError = '';
 
         // Pre-decode audio once for WebCodecs High-Speed Turbo mode if file fits comfortably in memory
         if (
@@ -2317,7 +2329,10 @@
 
           const startTime = (partNum - 1) * clipDuration;
           const actualDuration = Math.min(clipDuration, currentMovie.duration - startTime);
-          if (actualDuration <= 0.2) break;
+          if (actualDuration <= 0.2) {
+            console.warn(`Part ${partNum} skipped: offset is beyond movie duration`);
+            continue;
+          }
 
           const cleanTpl = (options.subtitleTemplate || 'Part {n}').split('/')[0].replace(/\{total\}/gi, '').trim() || 'Part {n}';
           const partText = cleanTpl.includes('{n}') ? cleanTpl.replace(/\{n\}/gi, String(partNum)) : `Part ${partNum}`;
@@ -2349,6 +2364,7 @@
               blob = await renderSinglePartWebCodecs(partParams);
             } catch (wcErr) {
               console.warn('WebCodecs fallback to normal browser renderer:', wcErr);
+              lastRenderError = wcErr.message || 'WebCodecs error';
               blob = null;
             }
           }
@@ -2358,6 +2374,7 @@
               blob = await renderSinglePartInBrowser(partParams);
             } catch (rErr) {
               console.warn(`Part ${partNum} browser render error:`, rErr);
+              lastRenderError = rErr.message || 'Browser render error';
               blob = null;
             }
           }
@@ -2405,7 +2422,8 @@
         } else if (generatedPartsList.length === 0) {
           jobStatusLabel.textContent = 'Splitting stopped: could not encode video.';
           if (jobErrorBanner) {
-            jobErrorBanner.textContent = 'Browser media encoder could not render this video format. Try another video format or connect to PC FFmpeg mode.';
+            const detailMsg = lastRenderError ? `: ${lastRenderError}` : '';
+            jobErrorBanner.textContent = `Browser media encoder could not render this video format${detailMsg}. Try another video format or connect to PC FFmpeg mode.`;
             jobErrorBanner.style.display = 'block';
           }
         } else {
@@ -2736,7 +2754,16 @@
       partText, partNum, totalParts, doneCount, totalToRender, options
     }) {
       return new Promise(async (resolve, reject) => {
-        const codecCandidates = ['avc1.640028', 'avc1.4d0028', 'avc1.42001f'];
+        const codecCandidates = [
+          'avc1.640033', // High Profile Level 5.1
+          'avc1.640032', // High Profile Level 5.0
+          'avc1.64002a', // High Profile Level 4.2
+          'avc1.640028', // High Profile Level 4.0
+          'avc1.4d0032', // Main Profile Level 5.0
+          'avc1.4d0028', // Main Profile Level 4.0
+          'avc1.420032', // Baseline Profile Level 5.0
+          'avc1.42001f'  // Baseline Profile Level 3.1
+        ];
         const targetBitrate = outW >= 1080 ? 4_500_000 : 2_800_000;
         const fps = 24;
         let selectedVideoConfig = null;
@@ -2760,6 +2787,33 @@
             } catch (_) {}
           }
           if (selectedVideoConfig) break;
+        }
+
+        if (!selectedVideoConfig && outW > 720) {
+          const safeW = 720;
+          const safeH = Math.round((safeW * outH) / outW / 2) * 2;
+          for (const accel of ['prefer-hardware', 'no-preference']) {
+            for (const c of codecCandidates) {
+              try {
+                const cfg = {
+                  codec: c,
+                  width: safeW,
+                  height: safeH,
+                  bitrate: 2_400_000,
+                  framerate: fps,
+                  hardwareAcceleration: accel
+                };
+                const sup = await VideoEncoder.isConfigSupported(cfg);
+                if (sup && sup.supported) {
+                  selectedVideoConfig = sup.config || cfg;
+                  outW = safeW;
+                  outH = safeH;
+                  break;
+                }
+              } catch (_) {}
+            }
+            if (selectedVideoConfig) break;
+          }
         }
 
         if (!selectedVideoConfig) {
@@ -3052,6 +3106,65 @@
       });
     }
 
+    function createResilientRecorder(stream, targetBitrate = 3500000) {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const candidates = isMobile
+        ? [
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp8',
+            'video/webm',
+            'video/mp4;codecs=avc1',
+            'video/mp4'
+          ]
+        : [
+            'video/mp4;codecs=avc1',
+            'video/mp4',
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm'
+          ];
+
+      for (const mime of candidates) {
+        try {
+          if (window.MediaRecorder && MediaRecorder.isTypeSupported(mime)) {
+            const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: targetBitrate });
+            return { recorder: rec, mimeType: mime };
+          }
+        } catch (_) {}
+      }
+      try {
+        return { recorder: new MediaRecorder(stream), mimeType: '' };
+      } catch (err) {
+        try {
+          const videoOnlyStream = new MediaStream(stream.getVideoTracks());
+          return { recorder: new MediaRecorder(videoOnlyStream), mimeType: '' };
+        } catch (err2) {
+          throw new Error('MediaRecorder is not supported on this browser: ' + err2.message);
+        }
+      }
+    }
+
+    function startSafeRecording(recorder, stream, chunks, onStopHandler) {
+      recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+      recorder.onstop = onStopHandler;
+      try {
+        recorder.start(1000);
+        return recorder;
+      } catch (startErr) {
+        console.warn('Initial recorder.start failed, attempting fallback without audio tracks...', startErr);
+        try {
+          const vOnlyStream = new MediaStream(stream.getVideoTracks());
+          const fallbackRec = new MediaRecorder(vOnlyStream);
+          fallbackRec.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+          fallbackRec.onstop = onStopHandler;
+          fallbackRec.start(1000);
+          return fallbackRec;
+        } catch (fErr) {
+          throw new Error('Could not start video recorder: ' + fErr.message);
+        }
+      }
+    }
+
     function renderSinglePartInBrowser({
       videoUrl, startTime, duration, outW, outH, scaleFactor,
       partText, partNum, totalParts, doneCount, totalToRender, options
@@ -3065,166 +3178,203 @@
         } catch (_) {}
 
         const isDemo = Boolean(currentMovie && currentMovie.isDemoLoop);
-        const video = document.createElement('video');
-        video.playbackRate = 1.0;
-        video.defaultPlaybackRate = 1.0;
-        video.loop = isDemo;
-        video.playsInline = true;
-        video.setAttribute('playsinline', '');
-        video.setAttribute('webkit-playsinline', '');
-        if (videoUrl && !videoUrl.startsWith('blob:') && !videoUrl.startsWith('data:')) {
-          try {
-            const u = new URL(videoUrl, window.location.href);
-            if (u.origin !== window.location.origin) video.crossOrigin = 'anonymous';
-          } catch (_) {}
-        }
-        video.style.cssText = 'position:fixed;width:120px;height:70px;opacity:0.85;pointer-events:none;bottom:8px;right:8px;z-index:99998;border-radius:4px;';
-        document.body.appendChild(video);
-        video.src = videoUrl;
-        video.load();
-
         const canvas = document.createElement('canvas');
         canvas.width = outW;
         canvas.height = outH;
         const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
 
-        let recordingActive = false;
-        const cleanup = () => {
-          recordingActive = false;
-          if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
-          try { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); } catch (_) {}
-        };
+        const zoomRatio = Math.max(1.0, Math.min(2.4, Number(options.frameZoomRatio) || 1.35));
+        const movieAspect = 16 / 9;
+        const scaledW = Math.round(outW * zoomRatio);
+        const scaledH = Math.min(outH - 80, Math.round(scaledW / movieAspect));
+        const drawX = Math.round((outW - scaledW) / 2);
+        const movieTopY = Math.round((outH - scaledH) / 2);
+        const movieBottomY = movieTopY + scaledH;
 
-        let hasStartedRecording = false;
+        const { bgCanvas } = createStaticFrameTemplate(outW, outH, scaleFactor, movieTopY, movieBottomY, partText, options);
+        ctx.drawImage(bgCanvas, 0, 0);
+
+        const canvasStream = canvas.captureStream ? canvas.captureStream(30) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(30) : null);
+        if (!canvasStream) {
+          if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
+          return reject(new Error('Canvas captureStream not supported in this browser'));
+        }
+
+        let recordingActive = false;
         let recordStartPerf = performance.now();
         let totalPausedMs = 0;
         let pauseStartPerf = 0;
+        const chunks = [];
+        let video = null;
 
-        video.onloadedmetadata = async () => {
-          if (startTime > 0 && !isDemo) {
-            video.currentTime = startTime;
-            await new Promise(r => {
-              const onSeek = () => { video.removeEventListener('seeked', onSeek); r(); };
-              video.addEventListener('seeked', onSeek);
-              setTimeout(r, 1200);
-            });
+        const cleanup = () => {
+          recordingActive = false;
+          if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
+          if (video) {
+            try { video.pause(); video.removeAttribute('src'); video.load(); video.remove(); } catch (_) {}
+            video = null;
           }
+        };
 
-          const canvasStream = canvas.captureStream ? canvas.captureStream(30) : (canvas.mozCaptureStream ? canvas.mozCaptureStream(30) : null);
-          if (!canvasStream) {
-            cleanup();
-            return reject(new Error('Canvas stream not supported on this browser'));
+        const onStopHandler = async () => {
+          recordingActive = false;
+          if (jobErrorBanner) {
+            jobErrorBanner.style.display = 'none';
+            jobErrorBanner.textContent = '';
           }
+          cleanup();
+          const finalType = (chunks[0] && chunks[0].type) || 'video/mp4';
+          const rawBlob = new Blob(chunks, { type: finalType });
+          try {
+            const patched = await patchMediaBlobDuration(rawBlob, duration);
+            resolve(patched);
+          } catch (_) {
+            resolve(rawBlob);
+          }
+        };
 
-          // Setup pristine unmuted audio capture routed directly into canvasStream
-          let audioTrack = null;
+        // --- BRANCH A: DEMO SCENE (Procedural Canvas + Web Audio Synth) ---
+        if (isDemo) {
           try {
             const AC = window.AudioContext || window.webkitAudioContext;
-            let audioCtx = sharedAudioCtx;
-            if (!audioCtx || audioCtx.state === 'closed') {
-              audioCtx = new AC();
-              sharedAudioCtx = audioCtx;
-            }
-            if (audioCtx.state === 'suspended') {
-              await audioCtx.resume();
-            }
-
-            video.muted = false;
-            video.volume = 1.0;
-
-            const source = audioCtx.createMediaElementSource(video);
-            const dest = audioCtx.createMediaStreamDestination();
-            source.connect(dest);
-
-            // Connect to zero-gain so speakers stay silent during clip processing
-            const zeroGain = audioCtx.createGain();
-            zeroGain.gain.value = 0.0;
-            source.connect(zeroGain);
-            zeroGain.connect(audioCtx.destination);
-
-            if (dest.stream && dest.stream.getAudioTracks().length > 0) {
-              audioTrack = dest.stream.getAudioTracks()[0];
+            if (AC) {
+              const aCtx = sharedAudioCtx || new AC();
+              sharedAudioCtx = aCtx;
+              if (aCtx.state === 'suspended') { await aCtx.resume().catch(() => {}); }
+              const osc = aCtx.createOscillator();
+              const gain = aCtx.createGain();
+              const dest = aCtx.createMediaStreamDestination();
+              osc.type = 'triangle';
+              osc.frequency.setValueAtTime(440, aCtx.currentTime);
+              gain.gain.setValueAtTime(0.06, aCtx.currentTime);
+              osc.connect(gain);
+              gain.connect(dest);
+              osc.start();
+              if (dest.stream && dest.stream.getAudioTracks().length > 0) {
+                canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+              }
             }
           } catch (aErr) {
-            console.warn('Web Audio direct stream notice:', aErr);
-            try {
-              const vStream = video.captureStream ? video.captureStream() : (video.mozCaptureStream ? video.mozCaptureStream() : null);
-              if (vStream && vStream.getAudioTracks().length > 0) {
-                audioTrack = vStream.getAudioTracks()[0];
-              }
-            } catch (_) {}
+            console.warn('Demo Web Audio notice:', aErr);
           }
 
-          if (audioTrack) {
-            canvasStream.addTrack(audioTrack);
-          }
-
-          const mimeCandidates = [
-            'video/mp4;codecs=avc1',
-            'video/mp4',
-            'video/webm;codecs=vp9',
-            'video/webm;codecs=vp8',
-            'video/webm'
-          ];
-          const mime = mimeCandidates.find(m => window.MediaRecorder && MediaRecorder.isTypeSupported(m)) || '';
-
-          let recorder;
+          let activeRec;
           try {
-            recorder = mime
-              ? new MediaRecorder(canvasStream, { mimeType: mime, videoBitsPerSecond: 4000000 })
-              : new MediaRecorder(canvasStream);
-          } catch (recErr) {
-            try {
-              recorder = new MediaRecorder(canvasStream);
-            } catch (recErr2) {
-              cleanup();
-              return reject(new Error('MediaRecorder initialization failed'));
-            }
+            const { recorder } = createResilientRecorder(canvasStream, 3500000);
+            activeRec = startSafeRecording(recorder, canvasStream, chunks, onStopHandler);
+          } catch (rErr) {
+            cleanup();
+            return reject(rErr);
           }
 
-          const chunks = [];
-          recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
-          recorder.onstop = async () => {
-            recordingActive = false;
-            const finalType = recorder.mimeType || mime || 'video/mp4';
-            if (jobErrorBanner) {
-              jobErrorBanner.style.display = 'none';
-              jobErrorBanner.textContent = '';
+          recordingActive = true;
+          recordStartPerf = performance.now();
+
+          const drawDemoFrame = () => {
+            if (!recordingActive) return;
+
+            if (isJobPaused) {
+              if (pauseStartPerf === 0) pauseStartPerf = performance.now();
+              if (activeRec.state === 'recording') activeRec.pause();
+              requestAnimationFrame(drawDemoFrame);
+              return;
+            } else {
+              if (pauseStartPerf > 0) {
+                totalPausedMs += (performance.now() - pauseStartPerf);
+                pauseStartPerf = 0;
+              }
+              if (activeRec.state === 'paused') activeRec.resume();
             }
-            cleanup();
-            const rawBlob = new Blob(chunks, { type: finalType });
-            try {
-              const patched = await patchMediaBlobDuration(rawBlob, duration);
-              resolve(patched);
-            } catch (_) {
-              resolve(rawBlob);
+
+            const activeElapsedMs = (performance.now() - recordStartPerf - totalPausedMs);
+            const elapsedClip = Math.max(0, activeElapsedMs / 1000);
+            const reachedEnd = elapsedClip >= duration;
+
+            if (isJobCancelled || browserCancelRequested || reachedEnd) {
+              recordingActive = false;
+              if (activeRec.state === 'recording') activeRec.stop();
+              return;
             }
+
+            const curClipPct = Math.min(99, Math.max(0, Math.round((elapsedClip / duration) * 100)));
+            const overallPct = Math.min(99, Math.round(((doneCount + curClipPct / 100) / totalToRender) * 100));
+            jobOverallPct.textContent = `${overallPct}%`;
+            jobProgressBar.style.width = `${overallPct}%`;
+            jobStatusLabel.textContent = `Encoding Part ${partNum} (${formatTime(elapsedClip)} / ${formatTime(duration)} — ${curClipPct}%)...`;
+
+            ctx.drawImage(bgCanvas, 0, 0);
+            drawDemoMovieScene(ctx, drawX, movieTopY, scaledW, scaledH, startTime + elapsedClip, Math.round(elapsedClip * 30), Math.round(duration * 30), partNum, duration);
+
+            requestAnimationFrame(drawDemoFrame);
           };
 
-          const zoomRatio = Math.max(1.0, Math.min(2.4, Number(options.frameZoomRatio) || 1.35));
-          const movieAspect = (video.videoWidth || 1920) / (video.videoHeight || 1080);
-          const scaledW = Math.round(outW * zoomRatio);
-          const scaledH = Math.min(outH - 80, Math.round(scaledW / movieAspect));
-          const drawX = Math.round((outW - scaledW) / 2);
-          const movieTopY = Math.round((outH - scaledH) / 2);
-          const movieBottomY = movieTopY + scaledH;
+          requestAnimationFrame(drawDemoFrame);
+          return;
+        }
 
-          // Pre-render the static black background + Part X text ONCE
-          const { bgCanvas } = createStaticFrameTemplate(outW, outH, scaleFactor, movieTopY, movieBottomY, partText, options);
-          ctx.drawImage(bgCanvas, 0, 0);
-          try { ctx.drawImage(video, drawX, movieTopY, scaledW, scaledH); } catch (_) {}
+        // --- BRANCH B: REAL MOVIE FILE RENDERING ---
+        video = document.createElement('video');
+        video.playbackRate = 1.0;
+        video.defaultPlaybackRate = 1.0;
+        video.playsInline = true;
+        video.setAttribute('playsinline', '');
+        video.setAttribute('webkit-playsinline', '');
+        video.muted = true;
+        video.style.cssText = 'position:fixed;width:120px;height:70px;opacity:0.85;pointer-events:none;bottom:8px;right:8px;z-index:99998;border-radius:4px;';
+        document.body.appendChild(video);
 
-          // Start recorder and video in exact synchronization at startTime
-          try {
-            recorder.start(1000);
-            hasStartedRecording = true;
-            recordStartPerf = performance.now();
-            if (jobErrorBanner) {
-              jobErrorBanner.style.display = 'none';
-              jobErrorBanner.textContent = '';
+        let activeRec = null;
+        let started = false;
+
+        const startProcessing = async () => {
+          if (started) return;
+          started = true;
+
+          // Attempt seeking to startTime
+          if (startTime > 0 && video.duration && isFinite(video.duration)) {
+            const safeSeekTime = Math.min(startTime, Math.max(0, video.duration - 0.5));
+            try {
+              video.currentTime = safeSeekTime;
+              await new Promise(r => {
+                const onSeek = () => { video.removeEventListener('seeked', onSeek); r(); };
+                video.addEventListener('seeked', onSeek);
+                setTimeout(r, 1200);
+              });
+            } catch (skErr) {
+              console.warn('Seek warning:', skErr);
             }
-          } catch (stErr) {
-            console.warn('Recorder start warning:', stErr);
+          }
+
+          // Route audio if possible
+          try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) {
+              const audioCtx = sharedAudioCtx || new AC();
+              sharedAudioCtx = audioCtx;
+              if (audioCtx.state === 'suspended') await audioCtx.resume().catch(() => {});
+              video.muted = false;
+              const source = audioCtx.createMediaElementSource(video);
+              const dest = audioCtx.createMediaStreamDestination();
+              source.connect(dest);
+              const zeroGain = audioCtx.createGain();
+              zeroGain.gain.value = 0.0;
+              source.connect(zeroGain);
+              zeroGain.connect(audioCtx.destination);
+              if (dest.stream && dest.stream.getAudioTracks().length > 0) {
+                canvasStream.addTrack(dest.stream.getAudioTracks()[0]);
+              }
+            }
+          } catch (aErr) {
+            console.warn('Audio routing notice (using silent or direct stream):', aErr);
+            video.muted = true;
+          }
+
+          try {
+            const { recorder } = createResilientRecorder(canvasStream, 3500000);
+            activeRec = startSafeRecording(recorder, canvasStream, chunks, onStopHandler);
+          } catch (rErr) {
+            cleanup();
+            return reject(rErr);
           }
 
           try {
@@ -3235,20 +3385,16 @@
           }
 
           recordingActive = true;
-          const drawNextFrame = () => {
-            if (!recordingActive) return;
+          recordStartPerf = performance.now();
 
-            // Clear any error banner while actively recording
-            if (jobErrorBanner && jobErrorBanner.style.display !== 'none') {
-              jobErrorBanner.style.display = 'none';
-              jobErrorBanner.textContent = '';
-            }
+          const drawRealFrame = () => {
+            if (!recordingActive) return;
 
             if (isJobPaused) {
               if (pauseStartPerf === 0) pauseStartPerf = performance.now();
               if (!video.paused) video.pause();
-              if (recorder.state === 'recording') recorder.pause();
-              requestAnimationFrame(drawNextFrame);
+              if (activeRec.state === 'recording') activeRec.pause();
+              requestAnimationFrame(drawRealFrame);
               return;
             } else {
               if (pauseStartPerf > 0) {
@@ -3256,11 +3402,9 @@
                 pauseStartPerf = 0;
               }
               if (video.paused && !video.ended) video.play().catch(() => {});
-              if (recorder.state === 'paused') recorder.resume();
+              if (activeRec.state === 'paused') activeRec.resume();
             }
 
-            // If the source video ended or reached EOF (e.g. short test video or demo loop),
-            // rewind and continue seamlessly so the clip ALWAYS reaches the full requested duration (4m 55s / 295s default)
             if (video.ended || (video.duration && isFinite(video.duration) && video.currentTime >= video.duration - 0.08)) {
               video.currentTime = 0;
               video.play().catch(() => {});
@@ -3268,13 +3412,11 @@
 
             const activeElapsedMs = (performance.now() - recordStartPerf - totalPausedMs);
             const elapsedClip = Math.max(0, activeElapsedMs / 1000);
-
-            // Output clip duration is strictly guaranteed: stop ONLY when elapsedClip >= duration (295s default)
             const reachedEnd = elapsedClip >= duration;
 
             if (isJobCancelled || browserCancelRequested || reachedEnd) {
               recordingActive = false;
-              if (recorder.state === 'recording') recorder.stop();
+              if (activeRec.state === 'recording') activeRec.stop();
               return;
             }
 
@@ -3285,41 +3427,39 @@
             jobStatusLabel.textContent = `Encoding Part ${partNum} (${formatTime(elapsedClip)} / ${formatTime(duration)} — ${curClipPct}%)...`;
 
             try {
-              if (isDemo) {
-                ctx.drawImage(bgCanvas, 0, 0);
-                drawDemoMovieScene(ctx, drawX, movieTopY, scaledW, scaledH, startTime + elapsedClip, Math.round(elapsedClip * 30), Math.round(duration * 30), partNum, duration);
-              } else {
-                ctx.drawImage(bgCanvas, 0, 0);
-                ctx.drawImage(video, drawX, movieTopY, scaledW, scaledH);
-              }
+              ctx.drawImage(bgCanvas, 0, 0);
+              ctx.drawImage(video, drawX, movieTopY, scaledW, scaledH);
             } catch (_) {}
 
-            if ('requestVideoFrameCallback' in video && !isDemo) {
-              video.requestVideoFrameCallback(drawNextFrame);
+            if ('requestVideoFrameCallback' in video) {
+              video.requestVideoFrameCallback(drawRealFrame);
             } else {
-              requestAnimationFrame(drawNextFrame);
+              requestAnimationFrame(drawRealFrame);
             }
           };
 
-          if ('requestVideoFrameCallback' in video && !isDemo) {
-            video.requestVideoFrameCallback(drawNextFrame);
+          if ('requestVideoFrameCallback' in video) {
+            video.requestVideoFrameCallback(drawRealFrame);
           } else {
-            requestAnimationFrame(drawNextFrame);
+            requestAnimationFrame(drawRealFrame);
           }
         };
 
+        video.onloadedmetadata = startProcessing;
         video.onerror = (e) => {
-          if (hasStartedRecording) {
-            console.warn('Ignored non-fatal video error event because recording has already started:', e);
-            if (jobErrorBanner) {
-              jobErrorBanner.style.display = 'none';
-              jobErrorBanner.textContent = '';
-            }
+          if (recordingActive) {
+            console.warn('Ignored non-fatal video error event during recording:', e);
             return;
           }
           cleanup();
-          reject(new Error('Failed to render video in browser.'));
+          reject(new Error('Video playback error during rendering.'));
         };
+
+        video.src = videoUrl;
+        video.load();
+        if (video.readyState >= 1) {
+          startProcessing();
+        }
       });
     }
 
